@@ -115,4 +115,4 @@
 
 ## Следующий этап
 
-Модель данных, классы и API — см. [data-model.md](data-model.md).
+Модель данных, классы и API — см. [data-model.md](data-model.md). План тестирования — [testing.md](testing.md).
