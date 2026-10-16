@@ -42,3 +42,10 @@ export const NO_FACES: Faces = {
 export function veneeredSides(faces: Faces): Side[] {
   return SIDES.filter((side) => faces[side] !== null)
 }
+
+/** Color of a side that is not veneered: plain chipboard. */
+export const BASE_COLOR = '#d8cdb8'
+
+export function faceColor(faces: Faces, side: Side): string {
+  return faces[side] ?? BASE_COLOR
+}

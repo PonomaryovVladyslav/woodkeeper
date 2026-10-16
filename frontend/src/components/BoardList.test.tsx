@@ -104,6 +104,7 @@ describe('BoardCard', () => {
     expect(polka.getByText('× 4')).toBeInTheDocument()
     expect(polka.getByText('Отверстия под полкодержатели')).toBeInTheDocument()
     expect(polka.getByLabelText('Передняя кромка: #aa0000')).toBeInTheDocument()
+    expect(polka.getByRole('img', { name: 'Превью доски 1200 × 300 × 18 мм' })).toBeInTheDocument()
 
     const single = within(await card('Одна'))
     expect(single.queryByText(/^× /)).not.toBeInTheDocument()
@@ -311,5 +312,44 @@ describe('BoardEditor', () => {
 
     expect(await form.findByText('Не удалось сохранить')).toBeInTheDocument()
     expect(form.getByLabelText('Название')).toHaveValue('Полка')
+  })
+
+  it('clicking a face on the 3D model toggles that side in the form', async () => {
+    const api = fakeApi([PROJECT])
+    renderBoards()
+
+    const form = within(await openEditor(await screen.findByRole('button', { name: 'Доска' })))
+    await userEvent.type(form.getByLabelText('Название'), 'Полка')
+    await userEvent.type(form.getByLabelText('Длина'), '800')
+    await userEvent.type(form.getByLabelText('Ширина'), '300')
+    await userEvent.type(form.getByLabelText('Толщина'), '18')
+
+    await userEvent.click(await form.findByRole('button', { name: '3D: Правый торец' }))
+    expect(form.getByLabelText('Правый торец')).toBeChecked()
+
+    await userEvent.click(form.getByRole('button', { name: '3D: Верхняя пласть' }))
+    await userEvent.click(form.getByRole('button', { name: '3D: Верхняя пласть' }))
+    expect(form.getByLabelText('Верхняя пласть')).not.toBeChecked()
+
+    await userEvent.click(form.getByRole('button', { name: 'Сохранить' }))
+    await card('Полка')
+    expect(api.requests[0]?.body).toMatchObject({ faces: { ...NO_FACES, right: '#ffffff' } })
+  })
+
+  it('explains what a click on the hovered face will do', async () => {
+    fakeApi([PROJECT])
+    renderBoards()
+
+    const form = within(await openEditor(await screen.findByRole('button', { name: 'Доска' })))
+    const front = await form.findByRole('button', { name: '3D: Передняя кромка' })
+
+    await userEvent.hover(front)
+    expect(form.getByText('Передняя кромка: клик включит облицовку')).toBeInTheDocument()
+
+    await userEvent.click(front)
+    expect(form.getByText('Передняя кромка: клик снимет облицовку')).toBeInTheDocument()
+
+    await userEvent.unhover(front)
+    expect(form.getByText(/клик по грани включает облицовку/)).toBeInTheDocument()
   })
 })

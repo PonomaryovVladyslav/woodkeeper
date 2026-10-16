@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  BASE_COLOR,
   BOX_MATERIAL_ORDER,
+  faceColor,
   materialIndexOfSide,
   NO_FACES,
   SIDE_LABELS,
@@ -41,5 +43,12 @@ describe('faces', () => {
   it('lists veneered sides', () => {
     expect(veneeredSides(NO_FACES)).toEqual([])
     expect(veneeredSides({ ...NO_FACES, left: '#000000', top: '#ffffff' })).toEqual(['top', 'left'])
+  })
+})
+
+describe('faceColor', () => {
+  it('uses the veneer color or the base color', () => {
+    expect(faceColor({ ...NO_FACES, top: '#aa0000' }, 'top')).toBe('#aa0000')
+    expect(faceColor(NO_FACES, 'left')).toBe(BASE_COLOR)
   })
 })
