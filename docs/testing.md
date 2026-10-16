@@ -13,7 +13,7 @@
 | Фронтенд: компоненты | Формы, списки, фильтры, подтверждения | Vitest + React Testing Library + MSW (мок API) |
 | E2E | Ключевые сценарии в настоящем браузере на настоящем бэкенде | Playwright |
 | Ручное | Реальный вход Google, 3D-взаимодействие, телефон | Чек-лист (раздел 6) |
-| Статический анализ | Стиль, типы | ruff, mypy; tsc, ESLint |
+| Статический анализ | Стиль, типы | ruff, mypy; tsc, oxlint |
 
 Покрытие — ориентир, а не цель: бэкенд ~90%, фронтенд — вся логика в `lib/` и ключевые компоненты.
 
@@ -210,7 +210,7 @@ Playwright поднимает бэкенд (`APP_ENV=test`, пустая вре�
 | Job | Шаги |
 |---|---|
 | backend | `uv sync` → `ruff check` → `ruff format --check` → `mypy` → `pytest --cov` |
-| frontend | `npm ci` → `tsc --noEmit` → `eslint` → `vitest run` → `vite build` |
+| frontend | `npm ci` → `tsc -b` → `oxlint --deny-warnings` → `vitest run` → `vite build` |
 | api-types | Сгенерировать OpenAPI из FastAPI → `openapi-typescript` → `git diff --exit-code` (TS-типы не устарели) |
 | e2e | Playwright (после backend и frontend) |
 | docker | `docker build` на каждом PR (без push) |

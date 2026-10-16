@@ -105,9 +105,9 @@ graph TD
 **Зависит от:** —
 
 **Делаем:**
-- `frontend/`: Vite + React + TypeScript, Mantine, ESLint, Vitest + React Testing Library, MSW.
+- `frontend/`: Vite + React + TypeScript, Mantine, oxlint, Vitest + React Testing Library, MSW.
 - Vite proxy `/api` → `localhost:8000`.
-- GitHub Actions: job `frontend` (tsc, eslint, vitest, build).
+- GitHub Actions: job `frontend` (tsc, oxlint, vitest, build).
 
 **Тесты:** один смоук-тест компонента `App` рендерится.
 
@@ -374,7 +374,7 @@ graph TD
 
 - [ ] Код и тесты этапа в одной ветке.
 - [ ] Все тесты этапа проходят локально.
-- [ ] ruff / mypy / tsc / eslint без ошибок.
+- [ ] ruff / mypy / tsc / oxlint без ошибок.
 - [ ] CI в pull request зелёный.
 - [ ] При изменении API — перегенерированы TS-типы.
 - [ ] Если решение отличается от документации — документация обновлена в том же PR.

@@ -47,6 +47,8 @@
 | 3D | three.js через `@react-three/fiber` + `@react-three/drei` (`OrbitControls`) |
 | Колор-пикер | `react-colorful` |
 | Типы API | `openapi-typescript` — генерация TS-типов из OpenAPI-схемы FastAPI |
+| Линтер | oxlint (по умолчанию в шаблоне Vite; правила `rules-of-hooks`, `exhaustive-deps`) — вместо ESLint |
+| Тесты | Vitest + React Testing Library + MSW 3 (запросы без обработчика падают: `onUnhandledFrame: 'error'`) |
 
 3D-модель: `BoxGeometry` с массивом из 6 материалов (по одному на грань). Облицованная сторона — выбранный цвет, базовая — нейтральный цвет. Модель нормализуется под размер окна, реальные размеры показываются подписями. Сторону можно выбрать кликом по модели или чекбоксом в форме (синхронно).
 
