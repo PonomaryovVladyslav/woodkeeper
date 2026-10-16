@@ -1,4 +1,5 @@
 import { Checkbox, ColorSwatch, Group, Popover, Stack, Text, UnstyledButton } from '@mantine/core'
+import { useState } from 'react'
 import { HexColorInput, HexColorPicker } from 'react-colorful'
 
 import { SIDE_LABELS, SIDES } from '../lib/faces'
@@ -8,11 +9,19 @@ import { setSideColor, toggleSide, type VeneerState } from '../lib/veneer'
 interface Props {
   value: VeneerState
   onChange: (next: VeneerState) => void
-  /** Side highlighted from the 3D view (stage 10). */
+  /** Side highlighted from the 3D view. */
   activeSide?: Side | null
+  /** Lets the surrounding modal ignore Escape while a color picker is open. */
+  onPickerOpenChange?: (open: boolean) => void
 }
 
-export function FacesEditor({ value, onChange, activeSide = null }: Props) {
+export function FacesEditor({ value, onChange, activeSide = null, onPickerOpenChange }: Props) {
+  const [pickerSide, setPickerSide] = useState<Side | null>(null)
+  const openPicker = (side: Side | null) => {
+    setPickerSide(side)
+    onPickerOpenChange?.(side !== null)
+  }
+
   return (
     <Stack gap={6}>
       <Text size="sm" fw={500}>
@@ -35,12 +44,26 @@ export function FacesEditor({ value, onChange, activeSide = null }: Props) {
             <Checkbox
               label={label}
               checked={color !== null}
-              onChange={() => onChange(toggleSide(value, side))}
+              onChange={() => {
+                if (color !== null && pickerSide === side) openPicker(null)
+                onChange(toggleSide(value, side))
+              }}
             />
             {color !== null && (
-              <Popover position="bottom-end" shadow="md" withinPortal trapFocus>
+              <Popover
+                position="bottom-end"
+                shadow="md"
+                withinPortal
+                trapFocus
+                opened={pickerSide === side}
+                onChange={(opened) => openPicker(opened ? side : null)}
+              >
                 <Popover.Target>
-                  <UnstyledButton aria-label={`Цвет: ${label}`}>
+                  <UnstyledButton
+                    aria-label={`Цвет: ${label}`}
+                    aria-expanded={pickerSide === side}
+                    onClick={() => openPicker(pickerSide === side ? null : side)}
+                  >
                     <Group gap={6} wrap="nowrap">
                       <ColorSwatch color={color} size={22} />
                       <Text size="xs" c="dimmed" ff="monospace">
@@ -64,6 +87,7 @@ export function FacesEditor({ value, onChange, activeSide = null }: Props) {
                       }
                       style={{
                         font: 'inherit',
+                        fontSize: 16, // below 16px iOS zooms in on focus
                         padding: '4px 8px',
                         width: '100%',
                         border: '1px solid var(--mantine-color-default-border)',

@@ -29,7 +29,7 @@ export function BoardCard({
     <Card withBorder padding="sm" radius="md" opacity={board.is_ordered ? 0.7 : 1}>
       <Stack gap={6}>
         <Group justify="space-between" wrap="nowrap" align="flex-start">
-          <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
+          <Text component="h3" fw={600} m={0} style={{ overflowWrap: 'anywhere' }}>
             {board.name}
           </Text>
           {quantity && (

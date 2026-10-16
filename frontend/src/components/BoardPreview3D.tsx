@@ -1,5 +1,6 @@
-import { Edges, Html, OrbitControls } from '@react-three/drei'
+import { Bounds, Edges, Html, OrbitControls, useBounds } from '@react-three/drei'
 import { Canvas, type ThreeEvent } from '@react-three/fiber'
+import { type RefObject, useEffect, useRef } from 'react'
 
 import { BOX_MATERIAL_ORDER, faceColor, sideFromMaterialIndex } from '../lib/faces'
 import { normalizeBoxSize } from '../lib/normalize'
@@ -22,9 +23,26 @@ function sideOf(event: ThreeEvent<PointerEvent | MouseEvent>): Side | null {
   return index === undefined ? null : sideFromMaterialIndex(index)
 }
 
-function Label({ position, text }: { position: [number, number, number]; text: string }) {
+type Portal = RefObject<HTMLDivElement | null>
+
+function Label({
+  portal,
+  position,
+  text,
+}: {
+  portal: Portal
+  position: [number, number, number]
+  text: string
+}) {
   return (
-    <Html position={position} center style={{ pointerEvents: 'none' }}>
+    <Html
+      // A fixed container: drei otherwise picks `events.connected`, which is not set yet
+      // when the first label mounts, and that label then renders into a discarded root.
+      portal={portal as RefObject<HTMLElement>}
+      position={position}
+      center
+      style={{ pointerEvents: 'none' }}
+    >
       <div
         style={{
           fontSize: 11,
@@ -42,16 +60,34 @@ function Label({ position, text }: { position: [number, number, number]; text: s
   )
 }
 
+/** Re-fits the camera whenever the board's proportions change (and on canvas resize via `observe`). */
+function FitOnChange({ size }: { size: [number, number, number] }) {
+  const bounds = useBounds()
+  const [x, y, z] = size
+  useEffect(() => {
+    bounds.refresh().clip().fit()
+  }, [bounds, x, y, z])
+  return null
+}
+
 function validMm(mm: number): string {
   return Number.isFinite(mm) && mm > 0 ? `${mm} мм` : '—'
 }
 
-function BoardMesh({ dimensions, faces, hoveredSide, onHoverSide, onToggleSide }: BoardPreview3DProps) {
+function BoardMesh({
+  dimensions,
+  faces,
+  hoveredSide,
+  onHoverSide,
+  onToggleSide,
+  portal,
+}: BoardPreview3DProps & { portal: Portal }) {
   const [x, y, z] = normalizeBoxSize(dimensions)
   const gap = 0.12
 
   return (
     <group>
+      <FitOnChange size={[x, y, z]} />
       <mesh
         onPointerMove={(event) => {
           event.stopPropagation()
@@ -78,18 +114,34 @@ function BoardMesh({ dimensions, faces, hoveredSide, onHoverSide, onToggleSide }
         <Edges color="#444" />
       </mesh>
 
-      <Label position={[0, -y / 2 - gap, z / 2 + gap]} text={validMm(dimensions.length_mm)} />
-      <Label position={[x / 2 + gap, -y / 2 - gap, 0]} text={validMm(dimensions.width_mm)} />
-      <Label position={[x / 2 + gap, 0, z / 2 + gap]} text={validMm(dimensions.thickness_mm)} />
+      {/* Length under the front edge, width under the right end, thickness at the left end. */}
+      <Label
+        portal={portal}
+        position={[0, -y / 2 - gap, z / 2 + gap]}
+        text={validMm(dimensions.length_mm)}
+      />
+      <Label
+        portal={portal}
+        position={[x / 2 + gap, -y / 2 - gap, 0]}
+        text={validMm(dimensions.width_mm)}
+      />
+      <Label
+        portal={portal}
+        position={[-x / 2 - gap, 0, z / 2 + gap]}
+        text={validMm(dimensions.thickness_mm)}
+      />
     </group>
   )
 }
 
 /** Live 3D view for the editor. Loaded lazily: three.js is a large chunk. */
 export default function BoardPreview3D({ height = 280, ...props }: BoardPreview3DProps) {
+  const labels = useRef<HTMLDivElement>(null)
   return (
     <div
+      ref={labels}
       style={{
+        position: 'relative',
         height,
         borderRadius: 'var(--mantine-radius-md)',
         border: '1px solid var(--mantine-color-default-border)',
@@ -98,11 +150,14 @@ export default function BoardPreview3D({ height = 280, ...props }: BoardPreview3
         touchAction: 'none',
       }}
     >
-      <Canvas camera={{ position: [3.2, 2.6, 3.8], fov: 40 }} dpr={[1, 2]}>
+      <Canvas camera={{ position: [3.8, 3.1, 4.6], fov: 40 }} dpr={[1, 2]}>
         <ambientLight intensity={0.8} />
         <directionalLight position={[5, 8, 6]} intensity={1.4} />
         <directionalLight position={[-5, -3, -4]} intensity={0.4} />
-        <BoardMesh {...props} />
+        {/* Fit the board to the canvas: narrow phone screens and long boards alike. */}
+        <Bounds fit clip observe margin={1.5}>
+          <BoardMesh {...props} portal={labels} />
+        </Bounds>
         <OrbitControls makeDefault enablePan={false} minDistance={2.5} maxDistance={10} />
       </Canvas>
     </div>

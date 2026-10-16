@@ -19,7 +19,7 @@ function renderBoards() {
 
 /** The card (Mantine Card) that contains the board name. */
 async function card(name: string) {
-  const title = await screen.findByText(name, { selector: 'p' })
+  const title = await screen.findByRole('heading', { name })
   const element = title.closest<HTMLElement>('.mantine-Card-root')
   if (!element) throw new Error(`No card for ${name}`)
   return element
@@ -27,7 +27,7 @@ async function card(name: string) {
 
 const cardNames = () =>
   Array.from(document.querySelectorAll('.mantine-Card-root')).map(
-    (element) => element.querySelector('p')?.textContent,
+    (element) => element.querySelector('h3')?.textContent,
   )
 
 async function openEditor(button: HTMLElement) {
@@ -107,7 +107,7 @@ describe('BoardCard', () => {
     expect(polka.getByRole('img', { name: 'Превью доски 1200 × 300 × 18 мм' })).toBeInTheDocument()
 
     const single = within(await card('Одна'))
-    expect(single.queryByText(/^× /)).not.toBeInTheDocument()
+    expect(single.queryByText(/^× \d+$/)).not.toBeInTheDocument()
     expect(single.getByText('Без облицовки')).toBeInTheDocument()
   })
 
@@ -351,5 +351,30 @@ describe('BoardEditor', () => {
 
     await userEvent.unhover(front)
     expect(form.getByText(/клик по грани включает облицовку/)).toBeInTheDocument()
+  })
+})
+
+describe('BoardEditor color picker', () => {
+  it('Escape closes the color picker but keeps the editor open', async () => {
+    fakeApi([PROJECT])
+    renderBoards()
+
+    const dialog = await openEditor(await screen.findByRole('button', { name: 'Доска' }))
+    const form = within(dialog)
+    await userEvent.type(form.getByLabelText('Название'), 'Полка')
+    await userEvent.click(form.getByLabelText('Верхняя пласть'))
+    await userEvent.click(form.getByRole('button', { name: 'Цвет: Верхняя пласть' }))
+    await userEvent.click(await screen.findByLabelText('HEX: Верхняя пласть'))
+
+    await userEvent.keyboard('{Escape}')
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText('HEX: Верхняя пласть')).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(form.getByLabelText('Название')).toHaveValue('Полка')
+
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 })
