@@ -336,6 +336,8 @@ graph TD
 
 **Делаем:** чек-лист [deploy.md, раздел 9](deploy.md#9-подготовка-сервера-этап-14) — проверка сервера и бота, Docker, swap, Security Group, Elastic IP, домен, Google OAuth origin, S3-бакет и IAM-роль.
 
+✅ 2026-10-17. Все пункты выполнены; диск — см. [deploy.md, «Диск»](deploy.md#диск).
+
 ---
 
 ### 15. Деплой, бэкапы, смоук

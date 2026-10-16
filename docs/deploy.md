@@ -205,14 +205,14 @@ Cookie сессии: `HttpOnly`, `Secure` (в проде), `SameSite=Lax`, ср�
 | Инстанс | t3.micro, x86_64, 2 vCPU | Образ `linux/amd64` |
 | ОС | Ubuntu 26.04 LTS | Docker ставится из официального apt-репозитория Docker |
 | RAM | 908 МБ, занято ~410 МБ, доступно ~500 МБ | Хватает (app ~100 МБ + Caddy ~30 МБ), но **swap обязателен** |
-| Swap | нет | Добавить 2 ГБ |
+| Swap | нет | Добавлен 1 ГБ (см. «Диск») |
 | Диск | 6.7 ГБ, свободно 3.6 ГБ | Хватает; `deploy.sh` чистит старые образы (`docker image prune -f`) |
 | Порты | слушается только 22 | 80/443 свободны |
 | Бот | `reminder-bot.service` (systemd, `~/reminder_bot`, long polling, ~75 МБ) | Входящих портов не использует — **конфликтов нет**, бот не трогаем |
-| Docker | не установлен | Установить |
+| Docker | не установлен | Установлен 29.9 |
 | nginx / apache | нет | — |
-| AWS CLI | не установлен | Установить (`snap install aws-cli --classic`) |
-| IAM-роль инстанса | нет | Создать и прикрепить (для бэкапов в S3) |
+| AWS CLI | не установлен | Установлен (snap) |
+| IAM-роль инстанса | нет | `woodkeeper-ec2` |
 | Публичный IP | 18.222.97.98 | Привязка к домену — через Route 53 (владелец); убедиться, что это Elastic IP |
 | SSH | `ssh -i ~/Downloads/osvc.pem ubuntu@ec2-18-222-97-98.us-east-2.compute.amazonaws.com` | Используется в `deploy.sh` (хост и ключ — через переменные окружения, не в репозитории) |
 
@@ -233,15 +233,25 @@ systemctl list-units --type=service | grep -iE 'bot|nginx|apache'
 
 ### Шаги
 
-- [ ] Установить Docker Engine + Compose plugin; добавить пользователя в группу `docker`.
-- [ ] Swap 2 ГБ (`/swapfile`, запись в `/etc/fstab`).
-- [ ] Security Group: входящие 80, 443 (TCP) и 443 (UDP, для HTTP/3) — для всех; 22 — для своего IP.
-- [ ] Домен и DNS — **через Route 53** (делает владелец): hosted zone, A-запись → публичный IP сервера. IP должен быть Elastic IP, иначе он сменится при остановке инстанса.
-- [ ] Google Cloud Console: добавить `https://<домен>` в authorized JavaScript origins.
-- [ ] S3-бакет `woodkeeper-backups-<суффикс>`: приватный, lifecycle-правило «удалять объекты старше 60 дней».
-- [ ] IAM-роль для инстанса с политикой `s3:PutObject`, `s3:GetObject`, `s3:ListBucket` только на этот бакет; прикрепить к EC2.
-- [ ] AWS CLI на хосте (в Amazon Linux есть, в Ubuntu — установить).
-- [ ] `mkdir /opt/woodkeeper`, создать `.env` с правами `600`.
+Выполнено 2026-10-16 / 17:
+
+- [x] Docker Engine 29.9 + Compose v5.6 из официального репозитория Docker (`resolute`); пользователь `ubuntu` в группе `docker`; ротация логов по умолчанию в `/etc/docker/daemon.json`.
+- [x] Swap **1 ГБ** (`/swapfile`, `/etc/fstab`, `vm.swappiness=10`). Сначала был 2 ГБ, уменьшен из-за места на диске (см. ниже).
+- [x] Security Group `launch-wizard-8`: входящие 80, 443 (TCP); UDP 443 — по желанию (HTTP/3).
+- [x] Elastic IP `18.222.97.98` у инстанса `i-048aa1ff244bf59c8`.
+- [x] Route 53: A-запись `woodkeepervlad.com` → `18.222.97.98`.
+- [x] Google OAuth Client: origin `https://woodkeepervlad.com` (рядом с `http://localhost:5173`).
+- [x] S3-бакет `woodkeeper-backups-vlad` (us-east-2): приватный, lifecycle «удалять старше 60 дней».
+- [x] IAM-роль `woodkeeper-ec2` (инлайн-политика `woodkeeper-backups`: `PutObject`/`GetObject` на `woodkeeper/*`, `ListBucket` на бакет) прикреплена к инстансу. Проверено с сервера: запись/чтение в `woodkeeper/` работают, запись вне префикса и список всех бакетов — запрещены.
+- [x] AWS CLI 2 (snap `aws-cli`).
+- [x] `/opt/woodkeeper/.env` (600): `SECRET_KEY` сгенерирован на сервере и не покидал его, `GOOGLE_CLIENT_ID`, `DOMAIN`, `TAG`, `S3_BUCKET`.
+- [x] Образ `ghcr.io/ponomaryovvladyslav/woodkeeper` доступен анонимно — `docker login` на сервере не нужен.
+
+### Диск
+
+После установки Docker, образа (~455 МБ) и AWS CLI (snap) свободно было 590 МБ из 6.7 ГБ. Очищены кэш apt, старые ревизии snap, журналы; swap уменьшен до 1 ГБ → **свободно ~1.9 ГБ**. Хватает на работу (старые образы удаляет `deploy.sh`, логи ротируются), но запас небольшой.
+
+Рекомендация: расширить EBS-том до 16–20 ГБ (EC2 → Volumes → Modify volume; на сервере `sudo growpart /dev/nvme0n1 1 && sudo resize2fs /dev/nvme0n1p1`). Стоимость gp3 — около $0.08 за ГБ в месяц.
 
 ## 10. Процесс деплоя
 
