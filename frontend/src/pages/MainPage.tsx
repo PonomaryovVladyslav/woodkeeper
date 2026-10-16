@@ -13,6 +13,7 @@ import {
 import { useSearchParams } from 'react-router'
 
 import { useLogout, useMe, useProjects } from '../api/queries'
+import { BoardList } from '../components/BoardList'
 import { ProjectTabs } from '../components/ProjectTabs'
 import type { Project } from '../lib/types'
 
@@ -76,7 +77,7 @@ export function MainPage() {
                     {active.description}
                   </Text>
                 )}
-                <Text c="dimmed">Доски появятся здесь.</Text>
+                <BoardList key={active.id} projectId={active.id} />
               </Stack>
             ) : (
               <Center py="xl">
