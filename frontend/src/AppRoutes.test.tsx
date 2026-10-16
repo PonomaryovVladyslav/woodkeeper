@@ -83,13 +83,13 @@ describe('auth flow', () => {
     signIn(ALICE)
     const { queryClient } = renderWithProviders(<AppRoutes />, { route: '/' })
     const logout = await screen.findByRole('button', { name: 'Выйти' })
-    queryClient.setQueryData(['projects'], [{ id: 1 }])
+    queryClient.setQueryData(['user-data'], { secret: 1 })
 
     signOut() // the server clears the session cookie
     await userEvent.click(logout)
 
     expect(await googleButton()).toBeInTheDocument()
-    expect(queryClient.getQueryData(['projects'])).toBeUndefined()
+    expect(queryClient.getQueryData(['user-data'])).toBeUndefined()
   })
 
   it('redirects to login when the session expires (API answers 401)', async () => {

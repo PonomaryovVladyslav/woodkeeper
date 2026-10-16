@@ -52,7 +52,7 @@ describe('projects UI', () => {
     expect(screen.getByText('Спальня')).toBeInTheDocument()
 
     await userEvent.click(await tab('Шкаф'))
-    expect(await tab('Шкаф')).toHaveAttribute('aria-selected', 'true')
+    await waitFor(async () => expect(await tab('Шкаф')).toHaveAttribute('aria-selected', 'true'))
   })
 
   it('creates a project and selects it', async () => {
@@ -66,7 +66,9 @@ describe('projects UI', () => {
     await userEvent.type(within(dialog).getByLabelText('Описание'), 'Спальня')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Создать' }))
 
-    expect(await tab('Комод')).toHaveAttribute('aria-selected', 'true')
+    // The list refetches first, then the new project gets selected.
+    const created = await tab('Комод')
+    await waitFor(() => expect(created).toHaveAttribute('aria-selected', 'true'))
     expect(api.requests).toEqual([
       { method: 'POST', path: '/api/projects', body: { name: 'Комод', description: 'Спальня' } },
     ])
@@ -119,7 +121,8 @@ describe('projects UI', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Удалить' }))
 
     await waitFor(() => expect(screen.queryByRole('tab', { name: /Шкаф/ })).not.toBeInTheDocument())
-    expect(await tab('Комод')).toHaveAttribute('aria-selected', 'true')
+    const remaining = await tab('Комод')
+    await waitFor(() => expect(remaining).toHaveAttribute('aria-selected', 'true'))
     expect(api.requests).toEqual([{ method: 'DELETE', path: '/api/projects/1', body: null }])
   })
 
