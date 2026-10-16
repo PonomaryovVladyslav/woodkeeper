@@ -88,3 +88,60 @@ export function useDeleteProject() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.projects }),
   })
 }
+
+type BoardCreate = components['schemas']['BoardCreate']
+type BoardUpdate = components['schemas']['BoardUpdate']
+
+export function useBoards(projectId: number) {
+  return useQuery({
+    queryKey: queryKeys.projectBoards(projectId),
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/projects/{project_id}/boards', {
+          params: { path: { project_id: projectId } },
+        }),
+      ),
+  })
+}
+
+/** Boards change project counters too, so both lists are refreshed. */
+function useInvalidateBoards() {
+  const queryClient = useQueryClient()
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.boards }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects }),
+    ])
+}
+
+export function useCreateBoard(projectId: number) {
+  const invalidate = useInvalidateBoards()
+  return useMutation({
+    mutationFn: (body: BoardCreate) =>
+      unwrap(
+        api.POST('/api/projects/{project_id}/boards', {
+          params: { path: { project_id: projectId } },
+          body,
+        }),
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateBoard() {
+  const invalidate = useInvalidateBoards()
+  return useMutation({
+    mutationFn: ({ id, ...body }: BoardUpdate & { id: number }) =>
+      unwrap(api.PATCH('/api/boards/{board_id}', { params: { path: { board_id: id } }, body })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteBoard() {
+  const invalidate = useInvalidateBoards()
+  return useMutation({
+    mutationFn: (id: number) =>
+      unwrap(api.DELETE('/api/boards/{board_id}', { params: { path: { board_id: id } } })),
+    onSuccess: invalidate,
+  })
+}
