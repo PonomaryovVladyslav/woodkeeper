@@ -3,6 +3,7 @@ import { IconCopy, IconPencil, IconTrash } from '@tabler/icons-react'
 
 import { formatDimensions, formatQuantity } from '../lib/format'
 import type { Board } from '../lib/types'
+import { BoardPreviewStatic } from './BoardPreviewStatic'
 import { FaceSwatches } from './FaceSwatches'
 
 interface Props {
@@ -37,8 +38,13 @@ export function BoardCard({
             </Badge>
           )}
         </Group>
-        <Text size="sm">{formatDimensions(board)}</Text>
-        <FaceSwatches faces={board.faces} />
+        <Group gap="sm" wrap="nowrap" align="center">
+          <BoardPreviewStatic dimensions={board} faces={board.faces} height={56} />
+          <Stack gap={4} style={{ minWidth: 0 }}>
+            <Text size="sm">{formatDimensions(board)}</Text>
+            <FaceSwatches faces={board.faces} />
+          </Stack>
+        </Group>
         {board.notes && (
           <Text size="xs" c="dimmed" lineClamp={3} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
             {board.notes}

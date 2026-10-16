@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 
 import { cleanup } from '@testing-library/react'
-import { afterAll, afterEach, beforeAll } from 'vitest'
+import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 
 import { server } from './server'
 
@@ -40,3 +40,9 @@ afterEach(() => {
   server.resetHandlers()
 })
 afterAll(() => server.close())
+
+// jsdom has no WebGL: the 3D view is replaced with buttons that act like clicks on faces.
+vi.mock('../components/BoardPreview3D', async () => {
+  const { BoardPreview3DStub } = await import('./BoardPreview3DStub')
+  return { default: BoardPreview3DStub }
+})
