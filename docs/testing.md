@@ -119,12 +119,12 @@ backend/tests/
 
 ### 3.8 Статика, конфиг, бэкап (`test_static.py`, `test_backup.py`)
 
-- [ ] `GET /api/config` без авторизации → `{google_client_id}`.
-- [ ] `GET /api/health` → 200.
-- [ ] `GET /` и `GET /любой/путь` → `index.html` с `Cache-Control: no-cache`.
-- [ ] `GET /assets/<файл>` → файл с `immutable`.
-- [ ] `GET /api/несуществующий` → 404 JSON, а не `index.html`.
-- [ ] `app.backup` создаёт открываемую копию БД с теми же данными, в том числе при активном WAL.
+- [x] `GET /api/config` без авторизации → `{google_client_id}`.
+- [x] `GET /api/health` → 200.
+- [x] `GET /` и `GET /любой/путь` → `index.html` с `Cache-Control: no-cache`.
+- [x] `GET /assets/<файл>` → файл с `immutable`.
+- [x] `GET /api/несуществующий` → 404 JSON, а не `index.html`.
+- [x] `app.backup` создаёт открываемую копию БД с теми же данными, в том числе при активном WAL.
 
 ## 4. Тесты фронтенда
 
@@ -225,7 +225,7 @@ Playwright (`frontend/playwright.config.ts`) поднимает бэкенд н�
 | frontend | `npm ci` → `tsc -b` → `oxlint --deny-warnings` → `vitest run` → `vite build` |
 | api-types | Сгенерировать OpenAPI из FastAPI → `openapi-typescript` → `git diff --exit-code` (TS-типы не устарели) |
 | e2e | Playwright: desktop (Chromium) + android (Galaxy S24) + iphone (WebKit, iPhone 15); после backend и frontend |
-| docker | `docker build` на каждом PR (без push) |
+| docker | Сборка образа `linux/amd64` на каждом PR (без push), запуск с `APP_ENV=test`, весь E2E-набор против него |
 | release | Только `main`, после зелёного CI: сборка и push образа в GHCR — см. [deploy.md](deploy.md) |
 
 ## 9. Порядок внедрения

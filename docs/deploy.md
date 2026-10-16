@@ -44,13 +44,17 @@ backend/app/backup.py       python -m app.backup <путь> — копия че�
 deploy/
   docker-compose.yml        app + caddy
   docker-compose.local.yml  переопределения для локального запуска (этап 13)
-  Caddyfile
+  caddy/
+    common.caddy            общее: gzip/zstd, reverse_proxy, заголовки
+    Caddyfile               прод: + HSTS
+    Caddyfile.local         локально: без HSTS (иначе браузер запомнит HTTPS для localhost)
   .env.example              шаблон переменных для сервера
+  .env.local.example        шаблон для локального запуска (копия — .env.local, не в git)
   deploy.sh                 деплой с локальной машины
   backup.sh                 бэкап в S3 (запускается cron на сервере)
-  restore.md                пошаговое восстановление из бэкапа
+  restore.md                пошаговое восстановление из бэкапа и откат миграции
 .github/workflows/
-  ci.yml                    тесты (из roadmap этап 0)
+  ci.yml                    тесты; job docker — сборка образа и E2E против него
   release.yml               сборка и push образа после зелёного CI в main
 ```
 
@@ -87,7 +91,7 @@ ENTRYPOINT ["./entrypoint.sh"]
 
 ### entrypoint.sh (логика)
 
-1. Если файл БД существует → `python -m app.backup /data/pre-migrate.db` (перезаписывается при каждом старте).
+1. `python -m app.backup /data/pre-migrate.db --if-exists` — копия БД, если она уже есть (перезаписывается при каждом старте).
 2. `alembic upgrade head`.
 3. `exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips '*'`.
 
@@ -95,7 +99,9 @@ ENTRYPOINT ["./entrypoint.sh"]
 
 - `/assets/*` → `StaticFiles`, заголовок `Cache-Control: public, max-age=31536000, immutable` (имена файлов с хешем).
 - Любой другой `GET`, не начинающийся с `/api` → `index.html` с `Cache-Control: no-cache` (SPA-fallback для React Router).
-- Неизвестный `/api/*` → 404 JSON, а не `index.html`.
+- Неизвестный `/api/*` → 404 JSON, а не `index.html` — для любого метода (в проде `POST /api/auth/test-login` → 404, не 405).
+- `HEAD` работает как `GET` (мониторинги); не-GET на маршруты приложения → 405.
+- Файлы из корня сборки (`favicon.svg`) отдаются как есть; выход за пределы `STATIC_DIR` невозможен.
 
 ### Новый эндпоинт
 
@@ -296,21 +302,27 @@ rm /tmp/woodkeeper.db.gz
 
 ## 13. Локальный запуск в Docker (этап 13)
 
-`docker-compose.local.yml` поверх основного:
+```bash
+cp deploy/.env.local.example deploy/.env.local   # SECRET_KEY, GOOGLE_CLIENT_ID
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml \
+  --env-file deploy/.env.local up -d --build
+# → https://localhost (сертификат внутреннего CA Caddy — браузер предупредит один раз)
+```
 
-- образ собирается локально (`build: ..`) вместо GHCR;
-- `DOMAIN=localhost` — Caddy выдаёт локальный сертификат своим CA (браузер предупредит один раз) — либо Caddy пропускается и app публикуется на `localhost:8000`;
-- `APP_ENV=production`, чтобы проверить именно прод-поведение (статика, `Secure`-cookie, отсутствие `test-login`).
+- Образ собирается локально под **`linux/amd64`** — как на сервере (на Apple Silicon через эмуляцию). Помимо паритета: arm64-wheel `cryptography` 50 падает с SIGILL в VM Docker Desktop.
+- `APP_ENV=production`: статика из образа, `Secure`-cookie, `test-login` → 404.
+- Для входа через Google добавить origin `https://localhost` в OAuth Client.
+- E2E против образа: `docker run -e APP_ENV=test ...` и `E2E_BASE_URL=http://localhost:<порт> npx playwright test` (так же делает job `docker` в CI).
 
-В Google OAuth для этого добавить origin `https://localhost` (или `http://localhost:8000`).
+Проверено 2026-10-16: HTTP→HTTPS, заголовки, zstd, `immutable` для `/assets`, `no-cache` для страниц, 401/404, бэкап перед миграцией при рестарте, данные в volume; память app ~95 МБ / 256, Caddy ~20 МБ / 64; все 16 E2E (ноутбук, Android, iPhone) зелёные против образа.
 
 ## 14. Тесты, связанные с деплоем
 
-Добавляются в [testing.md](testing.md):
+Добавлены в [testing.md](testing.md) (✅ этап 13):
 
-- [ ] `GET /api/config` возвращает `google_client_id` без авторизации.
-- [ ] `GET /` и `GET /любой/путь` → `index.html` (SPA-fallback), `no-cache`.
-- [ ] `GET /assets/<файл>` → файл с `immutable`.
-- [ ] `GET /api/несуществующий` → 404 JSON, не `index.html`.
-- [ ] `app.backup` создаёт открываемую копию БД с теми же данными (в том числе при активном WAL).
-- [ ] В CI: образ собирается (`docker build`) на каждом PR, push — только из `main`.
+- [x] `GET /api/config` возвращает `google_client_id` без авторизации.
+- [x] `GET /` и `GET /любой/путь` → `index.html` (SPA-fallback), `no-cache`.
+- [x] `GET /assets/<файл>` → файл с `immutable`.
+- [x] `GET /api/несуществующий` → 404 JSON, не `index.html`.
+- [x] `app.backup` создаёт открываемую копию БД с теми же данными (в том числе при активном WAL).
+- [x] В CI: образ собирается (`docker build`) на каждом PR, push — только из `main`.

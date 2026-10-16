@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal, Self
 
 from pydantic import model_validator
@@ -14,6 +15,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./woodkeeper.db"
     secret_key: str = DEV_SECRET_KEY
     google_client_id: str = ""
+    # Built frontend (index.html + assets/). Unset in development: Vite serves the UI.
+    static_dir: Path | None = None
 
     @model_validator(mode="after")
     def _require_real_secret_in_production(self) -> Self:

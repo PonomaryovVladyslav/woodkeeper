@@ -1,0 +1,5 @@
+# Production: automatic Let's Encrypt certificate for $DOMAIN, HTTP -> HTTPS redirect.
+{$DOMAIN} {
+	import common.caddy
+	header Strict-Transport-Security "max-age=31536000"
+}
