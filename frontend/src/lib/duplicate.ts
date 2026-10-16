@@ -1,7 +1,7 @@
+import { NAME_MAX_LENGTH } from './limits'
 import type { Board, BoardDraft } from './types'
 
 export const COPY_SUFFIX = ' (копия)'
-export const NAME_MAX_LENGTH = 100
 
 /** Editor prefill for "Дублировать": same board, not ordered, saved as a new one via POST. */
 export function duplicateDraft(board: Board): BoardDraft {

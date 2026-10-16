@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import type { components } from './schema'
 import { api, isUnauthorized, unwrap } from './client'
 import { queryKeys } from './keys'
 
@@ -49,5 +50,41 @@ export function useLogout() {
       const keep: readonly unknown[] = [queryKeys.me[0], queryKeys.config[0]]
       queryClient.removeQueries({ predicate: (query) => !keep.includes(query.queryKey[0]) })
     },
+  })
+}
+
+type ProjectCreate = components['schemas']['ProjectCreate']
+type ProjectUpdate = components['schemas']['ProjectUpdate']
+
+export function useProjects() {
+  return useQuery({
+    queryKey: queryKeys.projects,
+    queryFn: () => unwrap(api.GET('/api/projects')),
+  })
+}
+
+export function useCreateProject() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: ProjectCreate) => unwrap(api.POST('/api/projects', { body })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.projects }),
+  })
+}
+
+export function useUpdateProject() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: ProjectUpdate & { id: number }) =>
+      unwrap(api.PATCH('/api/projects/{project_id}', { params: { path: { project_id: id } }, body })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.projects }),
+  })
+}
+
+export function useDeleteProject() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) =>
+      unwrap(api.DELETE('/api/projects/{project_id}', { params: { path: { project_id: id } } })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.projects }),
   })
 }

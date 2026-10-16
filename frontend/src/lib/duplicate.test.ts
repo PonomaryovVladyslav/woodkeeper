@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { COPY_SUFFIX, duplicateDraft, NAME_MAX_LENGTH } from './duplicate'
+import { COPY_SUFFIX, duplicateDraft } from './duplicate'
 import { NO_FACES } from './faces'
+import { NAME_MAX_LENGTH } from './limits'
 import type { Board } from './types'
 
 const board: Board = {

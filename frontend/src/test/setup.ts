@@ -27,6 +27,13 @@ class ResizeObserverStub {
 }
 window.ResizeObserver = ResizeObserverStub
 
+// Textarea autosize listens for font loading.
+if (!('fonts' in document)) {
+  Object.defineProperty(document, 'fonts', {
+    value: { addEventListener: () => {}, removeEventListener: () => {} },
+  })
+}
+
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
   cleanup()
