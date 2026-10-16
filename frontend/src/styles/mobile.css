@@ -1,0 +1,6 @@
+/* iOS Safari zooms the page when a focused field's text is smaller than 16px. */
+@media (max-width: $mantine-breakpoint-sm) {
+  .mantine-Input-input {
+    font-size: max(16px, var(--input-fz, 16px));
+  }
+}

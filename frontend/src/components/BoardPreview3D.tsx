@@ -1,6 +1,6 @@
-import { Edges, Html, OrbitControls } from '@react-three/drei'
+import { Bounds, Edges, Html, OrbitControls, useBounds } from '@react-three/drei'
 import { Canvas, type ThreeEvent } from '@react-three/fiber'
-import { type RefObject, useRef } from 'react'
+import { type RefObject, useEffect, useRef } from 'react'
 
 import { BOX_MATERIAL_ORDER, faceColor, sideFromMaterialIndex } from '../lib/faces'
 import { normalizeBoxSize } from '../lib/normalize'
@@ -60,6 +60,16 @@ function Label({
   )
 }
 
+/** Re-fits the camera whenever the board's proportions change (and on canvas resize via `observe`). */
+function FitOnChange({ size }: { size: [number, number, number] }) {
+  const bounds = useBounds()
+  const [x, y, z] = size
+  useEffect(() => {
+    bounds.refresh().clip().fit()
+  }, [bounds, x, y, z])
+  return null
+}
+
 function validMm(mm: number): string {
   return Number.isFinite(mm) && mm > 0 ? `${mm} мм` : '—'
 }
@@ -77,6 +87,7 @@ function BoardMesh({
 
   return (
     <group>
+      <FitOnChange size={[x, y, z]} />
       <mesh
         onPointerMove={(event) => {
           event.stopPropagation()
@@ -143,7 +154,10 @@ export default function BoardPreview3D({ height = 280, ...props }: BoardPreview3
         <ambientLight intensity={0.8} />
         <directionalLight position={[5, 8, 6]} intensity={1.4} />
         <directionalLight position={[-5, -3, -4]} intensity={0.4} />
-        <BoardMesh {...props} portal={labels} />
+        {/* Fit the board to the canvas: narrow phone screens and long boards alike. */}
+        <Bounds fit clip observe margin={1.5}>
+          <BoardMesh {...props} portal={labels} />
+        </Bounds>
         <OrbitControls makeDefault enablePan={false} minDistance={2.5} maxDistance={10} />
       </Canvas>
     </div>

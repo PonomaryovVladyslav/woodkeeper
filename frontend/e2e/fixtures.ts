@@ -99,3 +99,36 @@ export function boardCard(page: Page, name: string) {
     has: page.getByRole('heading', { name, exact: true }),
   })
 }
+
+export interface SeedBoard {
+  name: string
+  length_mm?: number
+  width_mm?: number
+  thickness_mm?: number
+  quantity?: number
+  is_ordered?: boolean
+}
+
+/** Creates a project with boards through the API, as if prepared at home on the laptop. */
+export async function seedProject(page: Page, name: string, boards: SeedBoard[]) {
+  const project = await page.request.post('/api/projects', { data: { name } })
+  expect(project.ok()).toBe(true)
+  const { id } = (await project.json()) as { id: number }
+  for (const board of boards) {
+    const response = await page.request.post(`/api/projects/${id}/boards`, {
+      data: { length_mm: 800, width_mm: 300, thickness_mm: 18, ...board },
+    })
+    expect(response.ok()).toBe(true)
+  }
+  await page.reload()
+  await expect(page.getByRole('tab', { name: new RegExp(name) })).toBeVisible()
+  return id
+}
+
+/** Fails if the page can be scrolled sideways (something overflows the phone screen). */
+export async function expectNoHorizontalScroll(page: Page) {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(0)
+}

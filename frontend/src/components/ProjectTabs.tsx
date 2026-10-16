@@ -40,6 +40,8 @@ export function ProjectTabs({ projects, activeId, onSelect }: Props) {
             value={activeId === null ? null : String(activeId)}
             onChange={(value) => value && onSelect(Number(value))}
             style={{ flex: 1, minWidth: 0 }}
+            // Long project names must not squeeze the ordered/total badge away.
+            styles={{ tabSection: { flexShrink: 0 } }}
           >
             <Tabs.List style={{ flexWrap: 'wrap' }}>
               {projects.map((project) => (
@@ -51,7 +53,7 @@ export function ProjectTabs({ projects, activeId, onSelect }: Props) {
                       label={`Заказано ${project.ordered_count} из ${project.boards_count}`}
                       withArrow
                     >
-                      <Badge size="xs" variant="light" color="gray">
+                      <Badge size="xs" variant="light" color="gray" style={{ flexShrink: 0 }}>
                         {project.ordered_count}/{project.boards_count}
                       </Badge>
                     </Tooltip>

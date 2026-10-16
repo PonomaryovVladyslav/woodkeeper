@@ -173,6 +173,16 @@ Playwright (`frontend/playwright.config.ts`) поднимает бэкенд н�
 - [x] **3D-клик:** наведение на верхнюю пласть → подсказка, клик → сторона облицована; перетаскивание (вращение) облицовку не переключает.
 - [x] **Выход:** после выхода `/` перенаправляет на `/login`.
 
+### Телефон (`e2e/mobile.spec.ts`)
+
+Владелец пользуется приложением в магазине с телефона (Samsung), поэтому отдельные проекты Playwright: **android** — Galaxy S24 (Chromium, 360 px) и **iphone** — iPhone 15 (WebKit, 393 px). Данные заводятся через API («подготовлено дома на ноутбуке»), действия — касаниями.
+
+- [x] Фильтр «Не заказаны» и отметка «Заказана» тапом; бейдж «заказано/всего» не сжимается длинным названием подпроекта; нет горизонтальной прокрутки.
+- [x] Редактор на весь экран; шрифт полей ≥ 16 px (иначе iOS зумит страницу при фокусе); цвет в палитре — касаниями, палитра закрывается повторным тапом по образцу; сохранение.
+- [x] Тап по грани 3D-модели облицовывает сторону.
+
+Эмуляция не заменяет одну ручную проверку на настоящем телефоне после деплоя (раздел 6).
+
 ## 6. Ручной чек-лист
 
 Перед первым деплоем и после крупных изменений.
@@ -213,7 +223,7 @@ Playwright (`frontend/playwright.config.ts`) поднимает бэкенд н�
 | backend | `uv sync` → `ruff check` → `ruff format --check` → `mypy` → `pytest --cov` |
 | frontend | `npm ci` → `tsc -b` → `oxlint --deny-warnings` → `vitest run` → `vite build` |
 | api-types | Сгенерировать OpenAPI из FastAPI → `openapi-typescript` → `git diff --exit-code` (TS-типы не устарели) |
-| e2e | Playwright (после backend и frontend) |
+| e2e | Playwright: desktop (Chromium) + android (Galaxy S24) + iphone (WebKit, iPhone 15); после backend и frontend |
 | docker | `docker build` на каждом PR (без push) |
 | release | Только `main`, после зелёного CI: сборка и push образа в GHCR — см. [deploy.md](deploy.md) |
 

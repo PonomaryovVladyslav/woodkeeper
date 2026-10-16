@@ -17,12 +17,28 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'desktop',
+      testIgnore: /mobile\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         // Software WebGL, so the 3D view renders in headless Chromium.
         launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
       },
+    },
+    {
+      // The owner's phone: Samsung, Chrome-based browser.
+      name: 'android',
+      testMatch: /mobile\.spec\.ts/,
+      use: {
+        ...devices['Galaxy S24'],
+        launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
+      },
+    },
+    {
+      // Safari engine: catches iOS-specific issues (input zoom, touch handling).
+      name: 'iphone',
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices['iPhone 15'] },
     },
   ],
   webServer: [

@@ -87,6 +87,7 @@ export function FacesEditor({ value, onChange, activeSide = null, onPickerOpenCh
                       }
                       style={{
                         font: 'inherit',
+                        fontSize: 16, // below 16px iOS zooms in on focus
                         padding: '4px 8px',
                         width: '100%',
                         border: '1px solid var(--mantine-color-default-border)',
