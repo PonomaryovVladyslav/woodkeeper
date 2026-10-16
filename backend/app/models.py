@@ -13,6 +13,7 @@ from sqlalchemy import (
     TypeDecorator,
     false,
 )
+from sqlalchemy.engine.default import DefaultExecutionContext
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -49,9 +50,18 @@ class Base(DeclarativeBase):
     )
 
 
+def _created_at_or_now(context: DefaultExecutionContext) -> datetime:
+    # A new row gets identical created_at and updated_at, not two separate utcnow() calls.
+    params = context.get_current_parameters()  # type: ignore[no-untyped-call]
+    created_at: datetime | None = params.get("created_at")
+    return created_at or utcnow()
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=_created_at_or_now, onupdate=utcnow
+    )
 
 
 class User(Base):

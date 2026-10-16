@@ -75,7 +75,7 @@
 
 - `PRAGMA foreign_keys=ON` на каждом подключении (в SQLite выключено по умолчанию — без него не работает каскад).
 - `PRAGMA journal_mode=WAL`.
-- Время — UTC. SQLite не хранит часовой пояс, поэтому колонки времени — тип `UTCDateTime` (`app/models.py`): на запись принимает только aware-datetime и приводит к UTC, при чтении возвращает aware-datetime в UTC. В миграциях это обычный `sa.DateTime()`.
+- Время — UTC. У новой записи `updated_at` совпадает с `created_at`. SQLite не хранит часовой пояс, поэтому колонки времени — тип `UTCDateTime` (`app/models.py`): на запись принимает только aware-datetime и приводит к UTC, при чтении возвращает aware-datetime в UTC. В миграциях это обычный `sa.DateTime()`.
 - Имена ограничений и индексов задаются `naming_convention` в `Base.metadata` — нужно для `batch_alter_table` в миграциях SQLite.
 - Сессии в БД не хранятся: подписанная httpOnly-cookie `session` = `base64(JSON {uid, exp})` + `.` + `base64(HMAC-SHA256(SECRET_KEY))`, срок 30 дней. Без внешних библиотек (`app/auth.py`). Пользователь, удалённый из БД, с валидной cookie получает 401.
 - Порядок досок: сначала незаказанные, затем по `created_at`.
@@ -150,7 +150,7 @@ GoogleLoginIn    credential: str                           (ID-токен от G
 | DELETE | `/api/projects/{id}` | Удалить подпроект вместе с досками |
 | GET | `/api/projects/{id}/boards` | Доски подпроекта |
 | POST | `/api/projects/{id}/boards` | Добавить доску |
-| PATCH | `/api/boards/{id}` | Редактировать, отметить заказ, перенести в другой подпроект |
+| PATCH | `/api/boards/{id}` | Редактировать, отметить заказ, перенести в другой подпроект (`project_id` чужого или несуществующего проекта → 404) |
 | DELETE | `/api/boards/{id}` | Удалить доску |
 
 Все эндпоинты (кроме входа, `/api/config` и `/api/health`) требуют `get_current_user`. Чужой или несуществующий объект — 404.
