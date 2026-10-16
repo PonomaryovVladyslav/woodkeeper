@@ -144,7 +144,7 @@ GoogleLoginIn    credential: str                           (ID-токен от G
 | GET | `/api/auth/me` | Текущий пользователь или 401 |
 | GET | `/api/config` | Публичная конфигурация фронтенда: `{google_client_id}` (без авторизации) |
 | GET | `/api/health` | Проверка живости (без авторизации) |
-| GET | `/api/projects` | Список подпроектов со счётчиками |
+| GET | `/api/projects` | Список подпроектов в порядке создания со счётчиками: `boards_count` — число позиций (записей), не сумма `quantity`; `ordered_count` — из них заказанных |
 | POST | `/api/projects` | Создать подпроект |
 | PATCH | `/api/projects/{id}` | Переименовать / изменить описание |
 | DELETE | `/api/projects/{id}` | Удалить подпроект вместе с досками |

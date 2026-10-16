@@ -70,13 +70,13 @@ backend/tests/
 
 ### 3.3 Подпроекты (`test_projects.py`)
 
-- [ ] Создание → 201, ответ содержит `boards_count=0`, `ordered_count=0`.
-- [ ] Список возвращает только проекты текущего пользователя.
-- [ ] PATCH только `name` — `description` не меняется, и наоборот.
-- [ ] PATCH обновляет `updated_at`.
-- [ ] Невалидное имя (пустое, > 100) → 422.
-- [ ] Счётчики: 3 доски, 1 заказана → `boards_count=3`, `ordered_count=1`.
-- [ ] DELETE → 204, проект и все его доски удалены из БД.
+- [x] Создание → 201, ответ содержит `boards_count=0`, `ordered_count=0`.
+- [x] Список возвращает только проекты текущего пользователя.
+- [x] PATCH только `name` — `description` не меняется, и наоборот.
+- [x] PATCH обновляет `updated_at`.
+- [x] Невалидное имя (пустое, > 100) → 422.
+- [x] Счётчики: 3 доски, 1 заказана → `boards_count=3`, `ordered_count=1`.
+- [x] DELETE → 204, проект и все его доски удалены из БД.
 
 ### 3.4 Доски (`test_boards.py`)
 
@@ -98,7 +98,7 @@ backend/tests/
 
 Пользователь B для объектов пользователя A получает **404** (не 403) на:
 
-- [ ] `PATCH` / `DELETE /api/projects/{id}`;
+- [x] `PATCH` / `DELETE /api/projects/{id}`;
 - [ ] `GET` / `POST /api/projects/{id}/boards`;
 - [ ] `PATCH` / `DELETE /api/boards/{id}`;
 - [ ] `PATCH /api/boards/{свой_id}` с `project_id` чужого проекта (перенос в чужой проект запрещён);
