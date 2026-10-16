@@ -77,7 +77,7 @@
 - `PRAGMA journal_mode=WAL`.
 - Время — UTC. SQLite не хранит часовой пояс, поэтому колонки времени — тип `UTCDateTime` (`app/models.py`): на запись принимает только aware-datetime и приводит к UTC, при чтении возвращает aware-datetime в UTC. В миграциях это обычный `sa.DateTime()`.
 - Имена ограничений и индексов задаются `naming_convention` в `Base.metadata` — нужно для `batch_alter_table` в миграциях SQLite.
-- Сессии в БД не хранятся: подписанная httpOnly-cookie с `user_id` и сроком жизни.
+- Сессии в БД не хранятся: подписанная httpOnly-cookie `session` = `base64(JSON {uid, exp})` + `.` + `base64(HMAC-SHA256(SECRET_KEY))`, срок 30 дней. Без внешних библиотек (`app/auth.py`). Пользователь, удалённый из БД, с валидной cookie получает 401.
 - Порядок досок: сначала незаказанные, затем по `created_at`.
 
 ## 3. Модели SQLAlchemy (`app/models.py`)
@@ -138,7 +138,8 @@ GoogleLoginIn    credential: str                           (ID-токен от G
 
 | Метод | Путь | Описание |
 |---|---|---|
-| POST | `/api/auth/google` | `{credential}` → проверка токена, upsert пользователя, cookie → `UserRead` |
+| POST | `/api/auth/google` | `{credential}` → проверка токена, upsert пользователя, cookie → `UserRead`. Невалидный токен → 401; `GOOGLE_CLIENT_ID` не задан → 503 |
+| POST | `/api/auth/test-login` | Только при `APP_ENV=test`: `{sub, email, name?}` → как `/google`, но без Google |
 | POST | `/api/auth/logout` | Удаление cookie |
 | GET | `/api/auth/me` | Текущий пользователь или 401 |
 | GET | `/api/config` | Публичная конфигурация фронтенда: `{google_client_id}` (без авторизации) |
@@ -165,10 +166,10 @@ backend/
   app/
     main.py          FastAPI(), подключение роутеров, раздача статики + SPA-fallback
     config.py        Settings (pydantic-settings): APP_ENV, GOOGLE_CLIENT_ID, SECRET_KEY, DATABASE_URL, STATIC_DIR
-    db.py            make_engine() с PRAGMA-хуком, get_engine() / get_sessionmaker() (ленивые, из Settings), get_db()
+    db.py            make_engine() с PRAGMA-хуком, get_sessionmaker(url) (кэш по URL), get_db() — URL из Settings через Depends
     models.py
     schemas.py
-    auth.py          verify_google_token(), подпись cookie, get_current_user()
+    auth.py          verify_google_token(), get_token_verifier() (подменяется в тестах), подпись cookie, get_current_user()
     backup.py        python -m app.backup <путь> — консистентная копия SQLite
     routers/
       auth.py

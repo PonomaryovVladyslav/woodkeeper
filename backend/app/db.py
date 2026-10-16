@@ -1,11 +1,12 @@
 from collections.abc import Iterator
 from functools import lru_cache
-from typing import Any
+from typing import Annotated, Any
 
+from fastapi import Depends
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 
 
 def make_engine(url: str) -> Engine:
@@ -29,15 +30,10 @@ def make_sessionmaker(engine: Engine) -> sessionmaker[Session]:
 
 
 @lru_cache
-def get_engine() -> Engine:
-    return make_engine(get_settings().database_url)
+def get_sessionmaker(database_url: str) -> sessionmaker[Session]:
+    return make_sessionmaker(make_engine(database_url))
 
 
-@lru_cache
-def get_sessionmaker() -> sessionmaker[Session]:
-    return make_sessionmaker(get_engine())
-
-
-def get_db() -> Iterator[Session]:
-    with get_sessionmaker()() as session:
+def get_db(settings: Annotated[Settings, Depends(get_settings)]) -> Iterator[Session]:
+    with get_sessionmaker(settings.database_url)() as session:
         yield session
