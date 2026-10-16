@@ -75,7 +75,8 @@
 
 - `PRAGMA foreign_keys=ON` на каждом подключении (в SQLite выключено по умолчанию — без него не работает каскад).
 - `PRAGMA journal_mode=WAL`.
-- Время — UTC.
+- Время — UTC. SQLite не хранит часовой пояс, поэтому колонки времени — тип `UTCDateTime` (`app/models.py`): на запись принимает только aware-datetime и приводит к UTC, при чтении возвращает aware-datetime в UTC. В миграциях это обычный `sa.DateTime()`.
+- Имена ограничений и индексов задаются `naming_convention` в `Base.metadata` — нужно для `batch_alter_table` в миграциях SQLite.
 - Сессии в БД не хранятся: подписанная httpOnly-cookie с `user_id` и сроком жизни.
 - Порядок досок: сначала незаказанные, затем по `created_at`.
 
@@ -158,7 +159,7 @@ backend/
   app/
     main.py          FastAPI(), подключение роутеров, раздача статики + SPA-fallback
     config.py        Settings (pydantic-settings): APP_ENV, GOOGLE_CLIENT_ID, SECRET_KEY, DATABASE_URL, STATIC_DIR
-    db.py            engine, SessionLocal, PRAGMA-хук, get_db()
+    db.py            make_engine() с PRAGMA-хуком, get_engine() / get_sessionmaker() (ленивые, из Settings), get_db()
     models.py
     schemas.py
     auth.py          verify_google_token(), подпись cookie, get_current_user()

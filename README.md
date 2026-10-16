@@ -12,6 +12,7 @@
 cd backend
 cp .env.example .env
 uv sync
+uv run alembic upgrade head            # создать/обновить БД
 uv run uvicorn app.main:app --reload     # http://localhost:8000/docs
 uv run pytest                            # тесты
 uv run ruff check . && uv run mypy       # линтер и типы
