@@ -81,12 +81,13 @@
 
 - Сервер: существующий AWS EC2 (t2/t3.micro), на нём же работает телеграм-бот.
 - Docker Compose: `api` (FastAPI) + `caddy`.
-- Caddy: раздаёт статику фронтенда, проксирует `/api`, автоматический HTTPS (Let's Encrypt).
+- Один Docker-образ (бэкенд + собранный фронтенд), FastAPI раздаёт статику — см. [deploy.md](deploy.md).
+- Caddy: reverse proxy и автоматический HTTPS (Let's Encrypt).
 - Домен — купить перед деплоем, добавить в authorized origins Google OAuth.
 
 ```
-Интернет → Caddy (:443) ─┬─ /api/* → FastAPI (:8000) → SQLite (volume)
-                          └─ /*     → статика React (dist/)
+Интернет → Caddy (:443) → FastAPI (:8000) ─┬─ /api/* → SQLite (volume)
+                                            └─ /*     → статика React
 Телеграм-бот — независимо, как раньше
 ```
 
@@ -115,4 +116,4 @@
 
 ## Следующий этап
 
-Модель данных, классы и API — см. [data-model.md](data-model.md). План тестирования — [testing.md](testing.md). Порядок разработки — [roadmap.md](roadmap.md).
+Модель данных, классы и API — см. [data-model.md](data-model.md). План тестирования — [testing.md](testing.md). Порядок разработки — [roadmap.md](roadmap.md). Деплой — [deploy.md](deploy.md).

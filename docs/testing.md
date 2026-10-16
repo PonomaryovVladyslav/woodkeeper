@@ -39,6 +39,8 @@ backend/tests/
   test_access.py        доступ к чужим данным
   test_db.py            PRAGMA, CHECK, каскады на уровне БД
   test_migrations.py
+  test_static.py        SPA-fallback, кэш-заголовки, /api/config
+  test_backup.py        app.backup
 ```
 
 ## 3. Тест-кейсы бэкенда
@@ -114,6 +116,15 @@ backend/tests/
 - [ ] `alembic upgrade head` на пустой БД проходит.
 - [ ] После upgrade схема совпадает с моделями (аналог `alembic check` — нет непокрытых изменений).
 - [ ] `downgrade base` → `upgrade head` проходит без ошибок.
+
+### 3.8 Статика, конфиг, бэкап (`test_static.py`, `test_backup.py`)
+
+- [ ] `GET /api/config` без авторизации → `{google_client_id}`.
+- [ ] `GET /api/health` → 200.
+- [ ] `GET /` и `GET /любой/путь` → `index.html` с `Cache-Control: no-cache`.
+- [ ] `GET /assets/<файл>` → файл с `immutable`.
+- [ ] `GET /api/несуществующий` → 404 JSON, а не `index.html`.
+- [ ] `app.backup` создаёт открываемую копию БД с теми же данными, в том числе при активном WAL.
 
 ## 4. Тесты фронтенда
 
@@ -202,6 +213,8 @@ Playwright поднимает бэкенд (`APP_ENV=test`, пустая вре�
 | frontend | `npm ci` → `tsc --noEmit` → `eslint` → `vitest run` → `vite build` |
 | api-types | Сгенерировать OpenAPI из FastAPI → `openapi-typescript` → `git diff --exit-code` (TS-типы не устарели) |
 | e2e | Playwright (после backend и frontend) |
+| docker | `docker build` на каждом PR (без push) |
+| release | Только `main`, после зелёного CI: сборка и push образа в GHCR — см. [deploy.md](deploy.md) |
 
 ## 9. Порядок внедрения
 

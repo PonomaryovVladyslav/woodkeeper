@@ -134,6 +134,8 @@ GoogleLoginIn    credential: str                           (ID-токен от G
 | POST | `/api/auth/google` | `{credential}` → проверка токена, upsert пользователя, cookie → `UserRead` |
 | POST | `/api/auth/logout` | Удаление cookie |
 | GET | `/api/auth/me` | Текущий пользователь или 401 |
+| GET | `/api/config` | Публичная конфигурация фронтенда: `{google_client_id}` (без авторизации) |
+| GET | `/api/health` | Проверка живости (без авторизации) |
 | GET | `/api/projects` | Список подпроектов со счётчиками |
 | POST | `/api/projects` | Создать подпроект |
 | PATCH | `/api/projects/{id}` | Переименовать / изменить описание |
@@ -143,7 +145,7 @@ GoogleLoginIn    credential: str                           (ID-токен от G
 | PATCH | `/api/boards/{id}` | Редактировать, отметить заказ, перенести в другой подпроект |
 | DELETE | `/api/boards/{id}` | Удалить доску |
 
-Все эндпоинты (кроме входа) требуют `get_current_user`. Чужой или несуществующий объект — 404.
+Все эндпоинты (кроме входа, `/api/config` и `/api/health`) требуют `get_current_user`. Чужой или несуществующий объект — 404.
 
 ### Дублирование доски
 
@@ -154,16 +156,19 @@ GoogleLoginIn    credential: str                           (ID-токен от G
 ```
 backend/
   app/
-    main.py          FastAPI(), подключение роутеров
-    config.py        Settings (pydantic-settings): GOOGLE_CLIENT_ID, SECRET_KEY, DATABASE_URL
+    main.py          FastAPI(), подключение роутеров, раздача статики + SPA-fallback
+    config.py        Settings (pydantic-settings): APP_ENV, GOOGLE_CLIENT_ID, SECRET_KEY, DATABASE_URL, STATIC_DIR
     db.py            engine, SessionLocal, PRAGMA-хук, get_db()
     models.py
     schemas.py
     auth.py          verify_google_token(), подпись cookie, get_current_user()
+    backup.py        python -m app.backup <путь> — консистентная копия SQLite
     routers/
       auth.py
       projects.py
       boards.py
+      meta.py        /api/health, /api/config
+  entrypoint.sh      бэкап перед миграцией → alembic upgrade → uvicorn
   alembic/
   tests/
   pyproject.toml
