@@ -85,16 +85,30 @@ const positiveInteger = (message: string) => (value: number | string) =>
 /** Modal wrapper; the form mounts fresh on every open, so it starts from `state`. */
 export function BoardEditor({ projectId, state, onClose }: Props) {
   const phone = useMediaQuery('(max-width: 36em)')
+  // Escape in an open color picker must close the picker, not the editor with unsaved changes.
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const close = () => {
+    setPickerOpen(false)
+    onClose()
+  }
   return (
     <Modal
       opened={state !== null}
-      onClose={onClose}
+      onClose={close}
+      closeOnEscape={!pickerOpen}
       title={state ? TITLES[state.mode] : ''}
       size="xl"
       fullScreen={phone}
       centered
     >
-      {state && <BoardEditorForm projectId={projectId} state={state} onClose={onClose} />}
+      {state && (
+        <BoardEditorForm
+          projectId={projectId}
+          state={state}
+          onClose={close}
+          onPickerOpenChange={setPickerOpen}
+        />
+      )}
     </Modal>
   )
 }
@@ -103,10 +117,12 @@ function BoardEditorForm({
   projectId,
   state,
   onClose,
+  onPickerOpenChange,
 }: {
   projectId: number
   state: EditorState
   onClose: () => void
+  onPickerOpenChange: (open: boolean) => void
 }) {
   const create = useCreateBoard(projectId)
   const update = useUpdateBoard()
@@ -219,7 +235,12 @@ function BoardEditorForm({
             <Text size="xs" c="dimmed" mih={18}>
               {hint}
             </Text>
-            <FacesEditor value={veneer} onChange={changeVeneer} activeSide={hoveredSide} />
+            <FacesEditor
+              value={veneer}
+              onChange={changeVeneer}
+              activeSide={hoveredSide}
+              onPickerOpenChange={onPickerOpenChange}
+            />
           </Stack>
         </SimpleGrid>
         {failed && (
