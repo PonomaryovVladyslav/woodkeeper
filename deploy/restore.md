@@ -8,9 +8,10 @@ aws s3 ls s3://<S3_BUCKET>/woodkeeper/
 aws s3 cp s3://<S3_BUCKET>/woodkeeper/<дата>.db.gz /tmp/
 gunzip /tmp/<дата>.db.gz
 
-# 2. Проверить, что файл цел
-sqlite3 /tmp/<дата>.db 'PRAGMA integrity_check; SELECT count(*) FROM boards;'
-#    (нет sqlite3 на хосте: sudo apt-get install -y sqlite3)
+# 2. Проверить, что файл цел (sqlite3 CLI на сервере нет — используем python3)
+python3 -c "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); \
+  print(c.execute('pragma integrity_check').fetchone()[0], \
+        c.execute('select count(*) from boards').fetchone()[0], 'boards')" /tmp/<дата>.db
 
 # 3. Остановить приложение (Caddy можно не трогать)
 docker compose stop app
@@ -40,3 +41,15 @@ DEPLOY_HOST=... deploy/deploy.sh <предыдущий SHA>   # с локаль�
 ```
 
 Важно: `pre-migrate.db` перезаписывается при каждом старте — откатывайтесь до следующего перезапуска.
+
+## Проверка бэкапа без риска для боевой базы
+
+Так проверено 2026-10-16: восстановить свежую копию во временный контейнер с отдельным volume, убедиться, что приложение стартует и данные совпадают, затем удалить контейнер и volume.
+
+```bash
+docker volume create wk-restore-drill
+docker run --rm -v wk-restore-drill:/data -v /tmp:/restore --entrypoint sh <образ> -c 'cp /restore/<дата>.db /data/woodkeeper.db'
+docker run -d --name wk-restore-drill -v wk-restore-drill:/data -e SECRET_KEY=drill <образ>
+docker exec wk-restore-drill python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"
+docker rm -f wk-restore-drill && docker volume rm wk-restore-drill
+```

@@ -277,9 +277,31 @@ Job `deploy` в `release.yml` по SSH (`appleboy/ssh-action`), ключ и хо
 - **Код:** `deploy.sh <предыдущий SHA>`.
 - **Код + миграция БД:** остановить app → восстановить `/data/pre-migrate.db` в `/data/woodkeeper.db` → `deploy.sh <предыдущий SHA>`.
 
+### Первый деплой (2026-10-16)
+
+`deploy/deploy.sh 82d36d47cb222c5490a74964e5543e8f5798b043` — образ коммита этапа 13. Сертификат получен за секунды, app `healthy` через ~11 с. Память после старта: app ~66 МБ / 256, Caddy ~11 МБ / 64, у системы доступно ~375 МБ; диск — 1.8 ГБ свободно.
+
+Деплой с Mac:
+
+```bash
+DEPLOY_HOST=ubuntu@ec2-18-222-97-98.us-east-2.compute.amazonaws.com \
+DEPLOY_KEY=~/Downloads/osvc.pem deploy/deploy.sh <SHA коммита в main>
+```
+
+Сразу после выпуска сертификата приходят сканеры (новые сертификаты публикуются в Certificate Transparency) — это нормально.
+
 ## 11. Бэкапы
 
-### backup.sh (cron на хосте, ежедневно 03:00)
+### backup.sh (cron на хосте, ежедневно 03:00 UTC)
+
+Установлено в crontab пользователя `ubuntu`; `PATH` задан явно, т.к. `aws` из snap лежит в `/snap/bin`, которого нет в окружении cron. Лог — `/opt/woodkeeper/backup.log`.
+
+```
+PATH=/usr/local/bin:/usr/bin:/bin:/snap/bin
+0 3 * * * /opt/woodkeeper/backup.sh >> /opt/woodkeeper/backup.log 2>&1
+```
+
+Логика скрипта:
 
 ```
 docker compose exec -T app python -m app.backup /data/backup.db
