@@ -1,27 +1,14 @@
-// Mirrors backend schemas (app/schemas.py) until the generated API types arrive in stage 7.
+import type { components } from '../api/schema'
 
-export type Side = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
+type Schemas = components['schemas']
 
+export type User = Schemas['UserRead']
+export type Project = Schemas['ProjectRead']
+export type Board = Schemas['BoardRead']
 /** Veneer color per side, "#rrggbb"; null = side is not veneered. */
-export type Faces = Record<Side, string | null>
-
-export interface Dimensions {
-  length_mm: number
-  width_mm: number
-  thickness_mm: number
-}
-
-export interface Board extends Dimensions {
-  id: number
-  project_id: number
-  name: string
-  quantity: number
-  is_ordered: boolean
-  notes: string | null
-  faces: Faces
-  created_at: string
-  updated_at: string
-}
+export type Faces = Schemas['Faces-Output']
+export type Side = keyof Faces
+export type Dimensions = Pick<Board, 'length_mm' | 'width_mm' | 'thickness_mm'>
 
 /** Editor form state; becomes the body of POST /boards or PATCH /boards/{id}. */
 export type BoardDraft = Omit<Board, 'id' | 'project_id' | 'created_at' | 'updated_at'>
