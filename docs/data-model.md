@@ -126,7 +126,13 @@ BoardRead        id, project_id, все поля + faces, created_at, updated_at
 GoogleLoginIn    credential: str                           (ID-токен от Google)
 ```
 
-Преобразование 6 колонок ↔ `faces` — в одной функции-маппере.
+Преобразование 6 колонок ↔ `faces` — функции `faces_from_board()` / `faces_to_columns()`, `BoardRead.from_model()`.
+
+Уточнения валидации:
+
+- Размеры и количество — строгие целые: строки (`"12"`), дробные и `true` отклоняются.
+- `name` обрезается по краям; строка из одних пробелов считается пустой.
+- PATCH (`ProjectUpdate`, `BoardUpdate`): неуказанные поля не меняются; явный `null` разрешён только для `description` и `notes` (очистка), для остальных полей → 422. Изменения берутся из `changes()` — только переданные поля.
 
 ## 5. API
 
