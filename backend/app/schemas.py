@@ -30,6 +30,9 @@ SIDES: tuple[Side, ...] = get_args(Side)
 class Faces(BaseModel):
     """Veneer color per side; None = side is not veneered."""
 
+    # Optional in requests, but always present in responses: OpenAPI gets Faces-Input/-Output.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     top: HexColor | None = None
     bottom: HexColor | None = None
     front: HexColor | None = None
@@ -64,6 +67,14 @@ class PatchModel(BaseModel):
 
     def changes(self) -> dict[str, Any]:
         return {field: getattr(self, field) for field in self.model_fields_set}
+
+
+class HealthRead(BaseModel):
+    status: Literal["ok"]
+
+
+class ConfigRead(BaseModel):
+    google_client_id: str
 
 
 class UserRead(BaseModel):

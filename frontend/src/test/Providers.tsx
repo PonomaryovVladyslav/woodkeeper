@@ -1,8 +1,22 @@
 import { MantineProvider } from '@mantine/core'
+import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { MemoryRouter } from 'react-router'
 
 import { theme } from '../theme'
 
-export function Providers({ children }: { children: ReactNode }) {
-  return <MantineProvider theme={theme}>{children}</MantineProvider>
+interface Props {
+  children: ReactNode
+  queryClient: QueryClient
+  route: string
+}
+
+export function Providers({ children, queryClient, route }: Props) {
+  return (
+    <MantineProvider theme={theme}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+      </QueryClientProvider>
+    </MantineProvider>
+  )
 }

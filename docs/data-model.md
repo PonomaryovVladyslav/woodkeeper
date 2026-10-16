@@ -189,9 +189,12 @@ backend/
 ```
 frontend/src/
   api/
-    client.ts           fetch-обёртка (credentials: include, обработка 401)
-    schema.d.ts         генерируется openapi-typescript
-    queries.ts          хуки TanStack Query: useProjects, useBoards, useCreateBoard, ...
+    client.ts           openapi-fetch (credentials: include), unwrap() → данные или ApiError
+    schema.d.ts         генерируется: npm run gen:api (python -m app.openapi → openapi-typescript)
+    keys.ts             ключи запросов TanStack Query
+    queryClient.ts      любой 401 → me = null → RequireAuth уводит на /login; 4xx не повторяются
+    queries.ts          хуки: useConfig, useMe, useGoogleLogin, useLogout, ...
+    google.ts           однократная загрузка Google Identity Services
   pages/
     LoginPage.tsx       кнопка Google
     MainPage.tsx        вкладки подпроектов + список досок
@@ -204,6 +207,8 @@ frontend/src/
     DimensionsFields.tsx
     FacesEditor.tsx     6 строк «сторона — чекбокс — цвет», колор-пикер в поповере
     BoardPreview3D.tsx  Canvas + OrbitControls, клик по грани переключает облицовку
+    GoogleSignInButton.tsx  кнопка Google Identity Services → credential
+    RequireAuth.tsx     защищённые маршруты: загрузка / ошибка сервера / редирект на /login
   lib/
     types.ts            типы Board / Faces / BoardDraft (до генерации из OpenAPI в этапе 7)
     faces.ts            порядок граней ↔ материалы three.js, названия сторон
@@ -213,7 +218,9 @@ frontend/src/
     normalize.ts        размеры модели в сцене
 ```
 
-Дополнительные библиотеки: **TanStack Query** (данные и кэш), **React Router** (`/login`, `/`).
+Дополнительные библиотеки: **TanStack Query** (данные и кэш), **React Router** (`/login`, `/`), **openapi-fetch** (типизированные запросы по `schema.d.ts`).
+
+В OpenAPI `Faces` разделён на `Faces-Input` (стороны необязательны) и `Faces-Output` (все 6 всегда есть) — `json_schema_serialization_defaults_required` в схеме бэкенда.
 
 ### UI-решения
 

@@ -46,7 +46,7 @@
 | UI-компоненты | Mantine |
 | 3D | three.js через `@react-three/fiber` + `@react-three/drei` (`OrbitControls`) |
 | Колор-пикер | `react-colorful` |
-| Типы API | `openapi-typescript` — генерация TS-типов из OpenAPI-схемы FastAPI |
+| Типы API | `openapi-typescript` — генерация TS-типов из OpenAPI-схемы FastAPI; запросы через `openapi-fetch`. `openapi-typescript` 7 объявляет peer `typescript@^5`, у нас 6 — разрешено через `overrides` в `package.json` |
 | Линтер | oxlint (по умолчанию в шаблоне Vite; правила `rules-of-hooks`, `exhaustive-deps`) — вместо ESLint |
 | Тесты | Vitest + React Testing Library + MSW 3 (запросы без обработчика падают: `onUnhandledFrame: 'error'`) |
 
