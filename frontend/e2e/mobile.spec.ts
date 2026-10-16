@@ -2,6 +2,13 @@ import { boardCard, expect, expectNoHorizontalScroll, seedProject, test } from '
 
 // Shopping with a phone: check what is still to order, mark it, adjust a board on the spot.
 
+test('long project and board names fit the phone screen', async ({ app }) => {
+  await seedProject(app, 'Очень длинное название подпроекта для шкафа-купе в спальне', [
+    { name: 'Боковина_левая_с_пазом_под_заднюю_стенку_ХДФ_и_отверстиями_под_эксцентрики_Rafix' },
+  ])
+  await expectNoHorizontalScroll(app)
+})
+
 test('in the shop: filter what is left and mark a board as ordered', async ({ app }) => {
   await seedProject(app, 'Шкаф в прихожей', [
     { name: 'Боковина длинная с очень длинным названием для узкого экрана', quantity: 2 },
