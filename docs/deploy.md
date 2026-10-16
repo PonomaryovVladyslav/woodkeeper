@@ -188,10 +188,7 @@ Cookie сессии: `HttpOnly`, `Secure` (в проде), `SameSite=Lax`, ср�
 2. Логин в GHCR через `GITHUB_TOKEN`.
 3. `docker/build-push-action` с тегами `:latest` и `:<sha>`, кэш `type=gha`.
 
-Доступ сервера к образу:
-
-- **Репозиторий публичный** → пакет в GHCR делаем публичным, на сервере логин не нужен (секретов в образе нет).
-- **Репозиторий приватный** → на сервере один раз `docker login ghcr.io` с PAT (только `read:packages`).
+Доступ сервера к образу: репозиторий публичный → пакет в GHCR делается публичным (один раз в настройках пакета после первого push), на сервере `docker login` не нужен. Секретов в образе нет — все они в `.env` на сервере.
 
 ## 9. Подготовка сервера (этап 14)
 
@@ -210,7 +207,7 @@ Cookie сессии: `HttpOnly`, `Secure` (в проде), `SameSite=Lax`, ср�
 | nginx / apache | нет | — |
 | AWS CLI | не установлен | Установить (`snap install aws-cli --classic`) |
 | IAM-роль инстанса | нет | Создать и прикрепить (для бэкапов в S3) |
-| Публичный IP | 18.222.97.98 | Проверить в консоли AWS, что это Elastic IP; если нет — выделить и привязать до настройки DNS |
+| Публичный IP | 18.222.97.98 | Привязка к домену — через Route 53 (владелец); убедиться, что это Elastic IP |
 | SSH | `ssh -i ~/Downloads/osvc.pem ubuntu@ec2-18-222-97-98.us-east-2.compute.amazonaws.com` | Используется в `deploy.sh` (хост и ключ — через переменные окружения, не в репозитории) |
 
 ### Команды проверки (для повторной проверки)
@@ -233,7 +230,7 @@ systemctl list-units --type=service | grep -iE 'bot|nginx|apache'
 - [ ] Установить Docker Engine + Compose plugin; добавить пользователя в группу `docker`.
 - [ ] Swap 2 ГБ (`/swapfile`, запись в `/etc/fstab`).
 - [ ] Security Group: входящие 80, 443 (TCP) и 443 (UDP, для HTTP/3) — для всех; 22 — для своего IP.
-- [ ] Купить домен, A-запись → Elastic IP сервера (публичный IP без Elastic IP меняется при остановке инстанса).
+- [ ] Домен и DNS — **через Route 53** (делает владелец): hosted zone, A-запись → публичный IP сервера. IP должен быть Elastic IP, иначе он сменится при остановке инстанса.
 - [ ] Google Cloud Console: добавить `https://<домен>` в authorized JavaScript origins.
 - [ ] S3-бакет `woodkeeper-backups-<суффикс>`: приватный, lifecycle-правило «удалять объекты старше 60 дней».
 - [ ] IAM-роль для инстанса с политикой `s3:PutObject`, `s3:GetObject`, `s3:ListBucket` только на этот бакет; прикрепить к EC2.
