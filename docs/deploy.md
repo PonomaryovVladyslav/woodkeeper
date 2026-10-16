@@ -195,7 +195,25 @@ Cookie сессии: `HttpOnly`, `Secure` (в проде), `SameSite=Lax`, ср�
 
 ## 9. Подготовка сервера (этап 14)
 
-### Сначала проверить, что уже есть
+### Состояние сервера (проверено 2026-10-16)
+
+| Параметр | Значение | Вывод |
+|---|---|---|
+| Инстанс | t3.micro, x86_64, 2 vCPU | Образ `linux/amd64` |
+| ОС | Ubuntu 26.04 LTS | Docker ставится из официального apt-репозитория Docker |
+| RAM | 908 МБ, занято ~410 МБ, доступно ~500 МБ | Хватает (app ~100 МБ + Caddy ~30 МБ), но **swap обязателен** |
+| Swap | нет | Добавить 2 ГБ |
+| Диск | 6.7 ГБ, свободно 3.6 ГБ | Хватает; `deploy.sh` чистит старые образы (`docker image prune -f`) |
+| Порты | слушается только 22 | 80/443 свободны |
+| Бот | `reminder-bot.service` (systemd, `~/reminder_bot`, long polling, ~75 МБ) | Входящих портов не использует — **конфликтов нет**, бот не трогаем |
+| Docker | не установлен | Установить |
+| nginx / apache | нет | — |
+| AWS CLI | не установлен | Установить (`snap install aws-cli --classic`) |
+| IAM-роль инстанса | нет | Создать и прикрепить (для бэкапов в S3) |
+| Публичный IP | 18.222.97.98 | Проверить в консоли AWS, что это Elastic IP; если нет — выделить и привязать до настройки DNS |
+| SSH | `ssh -i ~/Downloads/osvc.pem ubuntu@ec2-18-222-97-98.us-east-2.compute.amazonaws.com` | Используется в `deploy.sh` (хост и ключ — через переменные окружения, не в репозитории) |
+
+### Команды проверки (для повторной проверки)
 
 ```bash
 cat /etc/os-release                 # Amazon Linux 2023 или Ubuntu
@@ -231,8 +249,9 @@ systemctl list-units --type=service | grep -iE 'bot|nginx|apache'
 1. Проверить, что образ с нужным тегом есть в GHCR.
 2. `scp deploy/docker-compose.yml deploy/Caddyfile deploy/backup.sh` → `/opt/woodkeeper/`.
 3. `ssh` → `cd /opt/woodkeeper && TAG=<tag> docker compose pull && docker compose up -d`.
-4. Подождать и проверить `curl -fsS https://<домен>/api/health`.
-5. Вывести `docker compose ps` и последние строки логов.
+4. `docker image prune -f` — удалить старые образы (диск 6.7 ГБ).
+5. Подождать и проверить `curl -fsS https://<домен>/api/health`.
+6. Вывести `docker compose ps` и последние строки логов.
 
 Первый деплой — то же самое плюс проверка, что Caddy получил сертификат (`docker compose logs caddy`).
 
