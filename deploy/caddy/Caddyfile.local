@@ -1,0 +1,5 @@
+# Local: Caddy's internal CA for https://localhost. No HSTS: the browser would
+# remember "HTTPS only" for localhost and break the Vite dev server on :5173.
+{$DOMAIN} {
+	import common.caddy
+}

@@ -1,0 +1,36 @@
+# Production stack on the server (/opt/woodkeeper). See docs/deploy.md.
+services:
+  app:
+    image: ghcr.io/ponomaryovvladyslav/woodkeeper:${TAG:-latest}
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite:////data/woodkeeper.db
+    volumes:
+      - data:/data
+    restart: unless-stopped
+    mem_limit: 256m
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./caddy:/etc/caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [app]
+    restart: unless-stopped
+    mem_limit: 64m
+    logging: *logging
+
+volumes:
+  data:
+  caddy_data: # certificates: do not delete, or Let's Encrypt rate limits may bite
+  caddy_config:

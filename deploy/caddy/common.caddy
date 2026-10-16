@@ -1,0 +1,11 @@
+# Shared by Caddyfile (production) and Caddyfile.local.
+encode zstd gzip
+reverse_proxy app:8000
+
+header {
+	X-Content-Type-Options "nosniff"
+	Referrer-Policy "strict-origin-when-cross-origin"
+	# The Google sign-in popup has to report back to this page.
+	Cross-Origin-Opener-Policy "same-origin-allow-popups"
+	-Server
+}
