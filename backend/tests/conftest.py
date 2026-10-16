@@ -1,14 +1,27 @@
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from app.auth import GoogleIdentity, InvalidTokenError, TokenVerifier, get_token_verifier
+from app.config import Settings
 from app.db import get_db, make_engine, make_sessionmaker
 from app.main import create_app
 from app.models import Base
+
+ClientFactory = Callable[[], TestClient]
+
+
+def fake_verify(credential: str) -> GoogleIdentity:
+    """Accepts credentials of the form "valid:<sub>"."""
+    prefix, _, sub = credential.partition(":")
+    if prefix != "valid" or not sub:
+        raise InvalidTokenError("bad token")
+    return GoogleIdentity(sub=sub, email=f"{sub}@example.com", name=sub.title(), picture=None)
 
 
 @pytest.fixture
@@ -31,14 +44,64 @@ def db_session(engine: Engine) -> Iterator[Session]:
 
 
 @pytest.fixture
-def client(engine: Engine) -> Iterator[TestClient]:
-    app = create_app()
+def settings(db_url: str) -> Settings:
+    return Settings(
+        app_env="test",
+        database_url=db_url,
+        secret_key="test-secret",
+        google_client_id="test-client-id",
+        _env_file=None,
+    )
+
+
+@pytest.fixture
+def app(settings: Settings, engine: Engine) -> FastAPI:
+    app = create_app(settings)
     session_factory = make_sessionmaker(engine)
 
     def override_get_db() -> Iterator[Session]:
         with session_factory() as session:
             yield session
 
+    def override_verifier() -> TokenVerifier:
+        return fake_verify
+
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
-        yield c
+    app.dependency_overrides[get_token_verifier] = override_verifier
+    return app
+
+
+@pytest.fixture
+def make_client(app: FastAPI) -> Iterator[ClientFactory]:
+    """Each client has its own cookie jar, i.e. its own browser."""
+    clients: list[TestClient] = []
+
+    def factory() -> TestClient:
+        client = TestClient(app)
+        clients.append(client)
+        return client
+
+    yield factory
+    for client in clients:
+        client.close()
+
+
+def login(client: TestClient, sub: str) -> TestClient:
+    response = client.post("/api/auth/test-login", json={"sub": sub, "email": f"{sub}@example.com"})
+    assert response.status_code == 200
+    return client
+
+
+@pytest.fixture
+def client(make_client: ClientFactory) -> TestClient:
+    return make_client()
+
+
+@pytest.fixture
+def user_client(make_client: ClientFactory) -> TestClient:
+    return login(make_client(), "user-a")
+
+
+@pytest.fixture
+def other_client(make_client: ClientFactory) -> TestClient:
+    return login(make_client(), "user-b")
