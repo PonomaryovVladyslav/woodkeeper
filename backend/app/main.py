@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.config import Settings, get_settings
-from app.routers import auth, meta, projects
+from app.routers import auth, boards, meta, projects
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -11,6 +11,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(meta.router)
     app.include_router(auth.router)
     app.include_router(projects.router)
+    app.include_router(boards.router)
     if settings.app_env == "test":
         app.include_router(auth.test_router)
     return app
