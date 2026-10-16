@@ -1,44 +1,12 @@
 from datetime import UTC, datetime
-from typing import Any
 
 import pytest
-from sqlalchemy import Engine, func, select, text
+from sqlalchemy import Engine, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Board, Project, User
-
-
-def make_user(session: Session, sub: str = "sub-a") -> User:
-    user = User(google_sub=sub, email=f"{sub}@example.com")
-    session.add(user)
-    session.flush()
-    return user
-
-
-def make_project(session: Session, user: User) -> Project:
-    project = Project(user=user, name="Шкаф")
-    session.add(project)
-    session.flush()
-    return project
-
-
-def make_board(session: Session, project: Project, **overrides: Any) -> Board:
-    fields: dict[str, Any] = {
-        "name": "Полка",
-        "length_mm": 800,
-        "width_mm": 300,
-        "thickness_mm": 18,
-        **overrides,
-    }
-    board = Board(project=project, **fields)
-    session.add(board)
-    session.flush()
-    return board
-
-
-def count(session: Session, model: type[User | Project | Board]) -> int:
-    return session.scalar(select(func.count()).select_from(model)) or 0
+from app.models import Board, Project
+from tests.factories import count, make_board, make_project, make_user
 
 
 def test_pragmas_on_new_connection(engine: Engine) -> None:

@@ -4,14 +4,14 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from app.auth import GoogleIdentity, InvalidTokenError, TokenVerifier, get_token_verifier
 from app.config import Settings
 from app.db import get_db, make_engine, make_sessionmaker
 from app.main import create_app
-from app.models import Base
+from app.models import Base, User
 
 ClientFactory = Callable[[], TestClient]
 
@@ -105,3 +105,21 @@ def user_client(make_client: ClientFactory) -> TestClient:
 @pytest.fixture
 def other_client(make_client: ClientFactory) -> TestClient:
     return login(make_client(), "user-b")
+
+
+def get_user(db: Session, sub: str) -> User:
+    user = db.scalar(select(User).where(User.google_sub == sub))
+    assert user is not None
+    return user
+
+
+@pytest.fixture
+def user_a(user_client: TestClient, db_session: Session) -> User:
+    """DB row of the user behind user_client."""
+    return get_user(db_session, "user-a")
+
+
+@pytest.fixture
+def user_b(other_client: TestClient, db_session: Session) -> User:
+    """DB row of the user behind other_client."""
+    return get_user(db_session, "user-b")

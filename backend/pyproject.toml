@@ -36,6 +36,7 @@ files = ["app", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+filterwarnings = ["error"]
 
 [tool.coverage.run]
 source = ["app"]
