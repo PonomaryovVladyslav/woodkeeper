@@ -9,10 +9,10 @@ import { ALICE } from './test/fixtures'
 import { renderWithProviders } from './test/render'
 import { server, signIn, signOut } from './test/server'
 
-// The real button needs Google's script; here it just hands over a fake credential.
+// The real button needs Google's script and leaves the page; a stand-in is enough here.
 vi.mock('./components/GoogleSignInButton', () => ({
-  GoogleSignInButton: ({ onCredential }: { onCredential: (credential: string) => void }) => (
-    <button type="button" onClick={() => onCredential('google-credential')}>
+  GoogleSignInButton: () => (
+    <button type="button" onClick={() => {}}>
       Войти через Google
     </button>
   ),
@@ -48,35 +48,18 @@ describe('auth flow', () => {
     expect(await screen.findByRole('button', { name: 'Выйти' })).toBeInTheDocument()
   })
 
-  it('logs in with the Google credential', async () => {
-    const received: unknown[] = []
-    server.use(
-      http.post('*/api/auth/google', async ({ request }) => {
-        received.push(await request.json())
-        signIn(ALICE) // the server sets the session cookie
-        return HttpResponse.json(ALICE)
-      }),
-    )
-    renderWithProviders(<AppRoutes />, { route: '/login' })
+  it('explains a failed Google login the backend sent back', async () => {
+    renderWithProviders(<AppRoutes />, { route: '/login?error=google' })
 
-    await userEvent.click(await googleButton())
-
-    expect(await screen.findByText('Alice')).toBeInTheDocument()
-    expect(received).toEqual([{ credential: 'google-credential' }])
+    expect(await googleButton()).toBeInTheDocument()
+    expect(screen.getByText('Не удалось войти')).toBeInTheDocument()
   })
 
-  it('stays on the login page when Google login is rejected', async () => {
-    server.use(
-      http.post('*/api/auth/google', () =>
-        HttpResponse.json({ detail: 'Invalid Google token' }, { status: 401 }),
-      ),
-    )
+  it('shows no error on a plain login page', async () => {
     renderWithProviders(<AppRoutes />, { route: '/login' })
 
-    await userEvent.click(await googleButton())
-
-    expect(await screen.findByText('Не удалось войти')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Войти через Google' })).toBeInTheDocument()
+    expect(await googleButton()).toBeInTheDocument()
+    expect(screen.queryByText('Не удалось войти')).not.toBeInTheDocument()
   })
 
   it('logs out and returns to the login page', async () => {

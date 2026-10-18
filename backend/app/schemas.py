@@ -86,8 +86,8 @@ class UserRead(BaseModel):
     avatar_url: str | None
 
 
-class GoogleLoginIn(BaseModel):
-    credential: Annotated[str, StringConstraints(min_length=1)]
+class GoogleNonce(BaseModel):
+    nonce: str
 
 
 class ProjectCreate(BaseModel):

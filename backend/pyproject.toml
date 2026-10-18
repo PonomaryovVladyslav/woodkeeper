@@ -8,6 +8,7 @@ dependencies = [
     "fastapi>=0.143.3",
     "google-auth>=2.62.0",
     "pydantic-settings>=2.16.0",
+    "python-multipart>=0.0.32",
     "requests>=2.34.2",
     "sqlalchemy>=2.1.4",
     "uvicorn[standard]>=0.54.0",

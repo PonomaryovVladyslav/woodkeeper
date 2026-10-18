@@ -1,30 +1,35 @@
 import { Alert, Loader } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
 
+import { api, unwrap } from '../api/client'
 import { loadGoogleIdentity } from '../api/google'
+
+/** The backend endpoint Google posts the signed-in user's ID token to. */
+const GOOGLE_LOGIN_PATH = '/api/auth/google/redirect'
 
 interface Props {
   clientId: string
-  onCredential: (credential: string) => void
 }
 
-export function GoogleSignInButton({ clientId, onCredential }: Props) {
+/**
+ * Google's button in redirect mode: the whole page goes to Google and comes back
+ * through the backend, which sets the session and redirects to the app. The popup
+ * mode leaves iOS Safari on a blank page after the account is picked.
+ */
+export function GoogleSignInButton({ clientId }: Props) {
   const container = useRef<HTMLDivElement>(null)
-  const callback = useRef(onCredential)
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading')
 
   useEffect(() => {
-    callback.current = onCredential
-  }, [onCredential])
-
-  useEffect(() => {
     let cancelled = false
-    loadGoogleIdentity()
-      .then(() => {
+    Promise.all([loadGoogleIdentity(), unwrap(api.GET('/api/auth/google/nonce'))])
+      .then(([, { nonce }]) => {
         if (cancelled || !container.current) return
         google.accounts.id.initialize({
           client_id: clientId,
-          callback: (response) => callback.current(response.credential),
+          ux_mode: 'redirect',
+          login_uri: new URL(GOOGLE_LOGIN_PATH, window.location.origin).href,
+          nonce,
         })
         google.accounts.id.renderButton(container.current, {
           type: 'standard',

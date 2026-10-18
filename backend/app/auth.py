@@ -30,6 +30,7 @@ class GoogleIdentity:
     email: str
     name: str | None = None
     picture: str | None = None
+    nonce: str | None = None
 
 
 TokenVerifier = Callable[[str], GoogleIdentity]
@@ -47,6 +48,7 @@ def verify_google_token(credential: str, client_id: str) -> GoogleIdentity:
         email=claims["email"],
         name=claims.get("name"),
         picture=claims.get("picture"),
+        nonce=claims.get("nonce"),
     )
 
 

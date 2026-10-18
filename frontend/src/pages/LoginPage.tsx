@@ -1,13 +1,15 @@
 import { Alert, Center, Loader, Paper, Stack, Text, Title } from '@mantine/core'
-import { Navigate } from 'react-router'
+import { Navigate, useSearchParams } from 'react-router'
 
-import { useConfig, useGoogleLogin, useMe } from '../api/queries'
+import { useConfig, useMe } from '../api/queries'
 import { GoogleSignInButton } from '../components/GoogleSignInButton'
 
 export function LoginPage() {
   const me = useMe()
   const config = useConfig()
-  const login = useGoogleLogin()
+  // The backend sends a failed Google login back here with ?error=google.
+  const [params] = useSearchParams()
+  const loginFailed = params.has('error')
 
   if (me.data) {
     return <Navigate to="/" replace />
@@ -34,14 +36,10 @@ export function LoginPage() {
             </Alert>
           )}
           {config.data?.google_client_id && (
-            <GoogleSignInButton
-              clientId={config.data.google_client_id}
-              onCredential={(credential) => login.mutate(credential)}
-            />
+            <GoogleSignInButton clientId={config.data.google_client_id} />
           )}
 
-          {login.isPending && <Loader size="sm" />}
-          {login.isError && (
+          {loginFailed && (
             <Alert color="red" title="Не удалось войти">
               Попробуйте ещё раз.
             </Alert>

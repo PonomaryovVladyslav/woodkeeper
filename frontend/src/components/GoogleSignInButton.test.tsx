@@ -1,7 +1,10 @@
 import { screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { http, HttpResponse } from 'msw'
+
 import { renderWithProviders } from '../test/render'
+import { server } from '../test/server'
 import { GoogleSignInButton } from './GoogleSignInButton'
 
 type Initialize = (config: google.accounts.id.IdConfiguration) => void
@@ -19,26 +22,28 @@ describe('GoogleSignInButton', () => {
     vi.unstubAllGlobals()
   })
 
-  it('initializes Google with the client id and renders the button', async () => {
+  it('initializes Google in redirect mode with the nonce and renders the button', async () => {
     const { initialize, renderButton } = installFakeGoogle()
 
-    renderWithProviders(<GoogleSignInButton clientId="client-123" onCredential={() => {}} />)
+    renderWithProviders(<GoogleSignInButton clientId="client-123" />)
 
     await waitFor(() => expect(renderButton).toHaveBeenCalledOnce())
-    expect(initialize).toHaveBeenCalledWith(expect.objectContaining({ client_id: 'client-123' }))
+    expect(initialize).toHaveBeenCalledWith({
+      client_id: 'client-123',
+      ux_mode: 'redirect',
+      login_uri: `${window.location.origin}/api/auth/google/redirect`,
+      nonce: 'test-nonce',
+    })
     expect(renderButton.mock.calls[0]?.[0]).toBe(screen.getByTestId('google-signin'))
   })
 
-  it('passes the credential from Google to onCredential', async () => {
-    const { initialize } = installFakeGoogle()
-    const onCredential = vi.fn<(credential: string) => void>()
+  it('shows an error when the nonce cannot be fetched', async () => {
+    const { renderButton } = installFakeGoogle()
+    server.use(http.get('*/api/auth/google/nonce', () => new HttpResponse(null, { status: 502 })))
 
-    renderWithProviders(<GoogleSignInButton clientId="client-123" onCredential={onCredential} />)
-    await waitFor(() => expect(initialize).toHaveBeenCalled())
+    renderWithProviders(<GoogleSignInButton clientId="client-123" />)
 
-    const config = initialize.mock.calls[0]?.[0]
-    config?.callback?.({ credential: 'jwt-token' } as google.accounts.id.CredentialResponse)
-
-    expect(onCredential).toHaveBeenCalledWith('jwt-token')
+    expect(await screen.findByText('Не удалось загрузить кнопку Google')).toBeInTheDocument()
+    expect(renderButton).not.toHaveBeenCalled()
   })
 })

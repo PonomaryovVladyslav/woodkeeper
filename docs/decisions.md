@@ -68,9 +68,14 @@
 
 ### Авторизация
 
-1. Фронтенд: кнопка Google Identity Services → получает ID-токен.
-2. Бэкенд: проверяет токен библиотекой `google-auth`, создаёт/находит пользователя.
-3. Бэкенд выдаёт подписанную httpOnly-cookie с сессией.
+1. Фронтенд: кнопка Google Identity Services в режиме **redirect** — вся страница уходит на Google.
+2. Google отправляет ID-токен формой (POST) на `/api/auth/google/redirect`.
+3. Бэкенд проверяет токен библиотекой `google-auth` и nonce, создаёт/находит пользователя.
+4. Бэкенд выдаёт подписанную httpOnly-cookie с сессией и перенаправляет на `/`.
+
+Почему не popup: в Safari на iPhone после выбора аккаунта вкладка Google оставалась белой — результат не возвращался на сайт (в Chrome на том же iPhone работало). Redirect не зависит от связи между вкладками.
+
+Защита от подделки входа (login CSRF): перед показом кнопки фронтенд берёт nonce у `GET /api/auth/google/nonce`, бэкенд кладёт его в cookie `google_nonce` (`HttpOnly`, `Secure`, `SameSite=None` — POST приходит с accounts.google.com, `Path=/api/auth/google`, 1 час). Google вшивает nonce в подписанный токен; токен с чужим nonce или без cookie отклоняется.
 
 ## Инфраструктура
 

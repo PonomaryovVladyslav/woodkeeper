@@ -41,7 +41,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/google": {
+    "/api/auth/google/nonce": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Google Nonce */
+        get: operations["google_nonce_api_auth_google_nonce_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/google/redirect": {
         parameters: {
             query?: never;
             header?: never;
@@ -50,8 +67,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login Google */
-        post: operations["login_google_api_auth_google_post"];
+        /** Login Google Redirect */
+        post: operations["login_google_redirect_api_auth_google_redirect_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -244,6 +261,14 @@ export interface components {
             notes?: string | null;
             faces?: components["schemas"]["Faces-Input"] | null;
         };
+        /** Body_login_google_redirect_api_auth_google_redirect_post */
+        Body_login_google_redirect_api_auth_google_redirect_post: {
+            /**
+             * Credential
+             * @default
+             */
+            credential: string;
+        };
         /** ConfigRead */
         ConfigRead: {
             /** Google Client Id */
@@ -285,10 +310,10 @@ export interface components {
             /** Right */
             right: string | null;
         };
-        /** GoogleLoginIn */
-        GoogleLoginIn: {
-            /** Credential */
-            credential: string;
+        /** GoogleNonce */
+        GoogleNonce: {
+            /** Nonce */
+            nonce: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -408,18 +433,14 @@ export interface operations {
             };
         };
     };
-    login_google_api_auth_google_post: {
+    google_nonce_api_auth_google_nonce_get: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GoogleLoginIn"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -427,7 +448,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserRead"];
+                    "application/json": components["schemas"]["GoogleNonce"];
+                };
+            };
+        };
+    };
+    login_google_redirect_api_auth_google_redirect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_login_google_redirect_api_auth_google_redirect_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

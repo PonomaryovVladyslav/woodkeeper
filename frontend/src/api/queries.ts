@@ -29,15 +29,6 @@ export function useMe() {
   })
 }
 
-export function useGoogleLogin() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (credential: string) =>
-      unwrap(api.POST('/api/auth/google', { body: { credential } })),
-    onSuccess: (user) => queryClient.setQueryData(queryKeys.me, user),
-  })
-}
-
 export function useLogout() {
   const queryClient = useQueryClient()
   return useMutation({
