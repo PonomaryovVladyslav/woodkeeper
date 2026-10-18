@@ -241,7 +241,7 @@ systemctl list-units --type=service | grep -iE 'bot|nginx|apache'
 - [x] Elastic IP `18.222.97.98` у инстанса `i-048aa1ff244bf59c8`.
 - [x] Route 53: A-запись `woodkeepervlad.com` → `18.222.97.98`.
 - [x] Google OAuth Client: origin `https://woodkeepervlad.com` (рядом с `http://localhost:5173`).
-- [ ] Google OAuth Client → Authorized redirect URIs: `https://woodkeepervlad.com/api/auth/google/redirect` и `http://localhost:5173/api/auth/google/redirect` (вход в redirect-режиме).
+- [x] Google OAuth Client → Authorized redirect URIs: `https://woodkeepervlad.com/api/auth/google/redirect` и `http://localhost:5173/api/auth/google/redirect` (вход в redirect-режиме).
 - [x] S3-бакет `woodkeeper-backups-vlad` (us-east-2): приватный, lifecycle «удалять старше 60 дней».
 - [x] IAM-роль `woodkeeper-ec2` (инлайн-политика `woodkeeper-backups`: `PutObject`/`GetObject` на `woodkeeper/*`, `ListBucket` на бакет) прикреплена к инстансу. Проверено с сервера: запись/чтение в `woodkeeper/` работают, запись вне префикса и список всех бакетов — запрещены.
 - [x] AWS CLI 2 (snap `aws-cli`).
