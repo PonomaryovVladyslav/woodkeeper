@@ -168,7 +168,7 @@ volumes:
 }
 ```
 
-`Cross-Origin-Opener-Policy: same-origin-allow-popups` нужен, чтобы всплывающее окно входа Google могло вернуть результат на страницу.
+`Cross-Origin-Opener-Policy: same-origin-allow-popups` остался со времён popup-входа Google; вход теперь через redirect, заголовок ничему не мешает.
 
 HTTP → HTTPS редирект Caddy делает автоматически.
 
@@ -241,6 +241,7 @@ systemctl list-units --type=service | grep -iE 'bot|nginx|apache'
 - [x] Elastic IP `18.222.97.98` у инстанса `i-048aa1ff244bf59c8`.
 - [x] Route 53: A-запись `woodkeepervlad.com` → `18.222.97.98`.
 - [x] Google OAuth Client: origin `https://woodkeepervlad.com` (рядом с `http://localhost:5173`).
+- [ ] Google OAuth Client → Authorized redirect URIs: `https://woodkeepervlad.com/api/auth/google/redirect` и `http://localhost:5173/api/auth/google/redirect` (вход в redirect-режиме).
 - [x] S3-бакет `woodkeeper-backups-vlad` (us-east-2): приватный, lifecycle «удалять старше 60 дней».
 - [x] IAM-роль `woodkeeper-ec2` (инлайн-политика `woodkeeper-backups`: `PutObject`/`GetObject` на `woodkeeper/*`, `ListBucket` на бакет) прикреплена к инстансу. Проверено с сервера: запись/чтение в `woodkeeper/` работают, запись вне префикса и список всех бакетов — запрещены.
 - [x] AWS CLI 2 (snap `aws-cli`).
@@ -343,7 +344,7 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml \
 
 - Образ собирается локально под **`linux/amd64`** — как на сервере (на Apple Silicon через эмуляцию). Помимо паритета: arm64-wheel `cryptography` 50 падает с SIGILL в VM Docker Desktop.
 - `APP_ENV=production`: статика из образа, `Secure`-cookie, `test-login` → 404.
-- Для входа через Google добавить origin `https://localhost` в OAuth Client.
+- Для входа через Google добавить в OAuth Client origin `https://localhost` и redirect URI `https://localhost/api/auth/google/redirect`.
 - E2E против образа: `docker run -e APP_ENV=test ...` и `E2E_BASE_URL=http://localhost:<порт> npx playwright test` (так же делает job `docker` в CI).
 
 Проверено 2026-10-16: HTTP→HTTPS, заголовки, zstd, `immutable` для `/assets`, `no-cache` для страниц, 401/404, бэкап перед миграцией при рестарте, данные в volume; память app ~95 МБ / 256, Caddy ~20 МБ / 64; все 16 E2E (ноутбук, Android, iPhone) зелёные против образа.

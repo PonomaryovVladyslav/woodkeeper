@@ -17,11 +17,14 @@ ClientFactory = Callable[[], TestClient]
 
 
 def fake_verify(credential: str) -> GoogleIdentity:
-    """Accepts credentials of the form "valid:<sub>"."""
-    prefix, _, sub = credential.partition(":")
+    """Accepts credentials of the form "valid:<sub>" or "valid:<sub>:<nonce>"."""
+    prefix, _, rest = credential.partition(":")
+    sub, _, nonce = rest.partition(":")
     if prefix != "valid" or not sub:
         raise InvalidTokenError("bad token")
-    return GoogleIdentity(sub=sub, email=f"{sub}@example.com", name=sub.title(), picture=None)
+    return GoogleIdentity(
+        sub=sub, email=f"{sub}@example.com", name=sub.title(), picture=None, nonce=nonce or None
+    )
 
 
 @pytest.fixture

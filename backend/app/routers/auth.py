@@ -1,6 +1,10 @@
+import contextlib
+import hmac
+import secrets
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Form, Request, Response, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,7 +21,7 @@ from app.auth import (
 from app.config import Settings, get_settings
 from app.db import get_db
 from app.models import User
-from app.schemas import GoogleLoginIn, UserRead
+from app.schemas import GoogleNonce, UserRead
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 test_router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -38,21 +42,62 @@ def upsert_user(db: Session, identity: GoogleIdentity) -> User:
     return user
 
 
-@router.post("/google")
-def login_google(
-    body: GoogleLoginIn,
-    response: Response,
+# Google signs the user in on its own page and POSTs the ID token back to
+# /google/redirect (GIS "redirect" mode). A popup would be simpler, but iOS Safari
+# loses the popup's hand-off and leaves the user on a blank page.
+#
+# The nonce ties that POST to this browser: it is stored in a cookie here and
+# Google embeds it in the signed token, so a token obtained elsewhere is rejected.
+# The POST comes from accounts.google.com, so the cookie must be SameSite=None
+# (which requires Secure; browsers allow that on http://localhost too).
+NONCE_COOKIE = "google_nonce"
+NONCE_PATH = "/api/auth/google"
+NONCE_MAX_AGE = 60 * 60
+
+
+def _clear_nonce(response: Response) -> None:
+    response.delete_cookie(
+        NONCE_COOKIE, path=NONCE_PATH, secure=True, httponly=True, samesite="none"
+    )
+
+
+@router.get("/google/nonce")
+def google_nonce(response: Response) -> GoogleNonce:
+    nonce = secrets.token_urlsafe(32)
+    response.set_cookie(
+        NONCE_COOKIE,
+        nonce,
+        max_age=NONCE_MAX_AGE,
+        path=NONCE_PATH,
+        secure=True,
+        httponly=True,
+        samesite="none",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return GoogleNonce(nonce=nonce)
+
+
+@router.post("/google/redirect", status_code=status.HTTP_303_SEE_OTHER)
+def login_google_redirect(
+    request: Request,
     db: DbSession,
     settings: AppSettings,
     verify: Annotated[TokenVerifier, Depends(get_token_verifier)],
-) -> UserRead:
-    try:
-        identity = verify(body.credential)
-    except InvalidTokenError as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid Google token") from exc
-    user = upsert_user(db, identity)
-    set_session_cookie(response, user.id, settings)
-    return UserRead.model_validate(user)
+    credential: Annotated[str, Form()] = "",
+) -> RedirectResponse:
+    expected_nonce = request.cookies.get(NONCE_COOKIE, "")
+    identity = None
+    if credential and expected_nonce:
+        with contextlib.suppress(InvalidTokenError):
+            identity = verify(credential)
+    if identity is None or not hmac.compare_digest(identity.nonce or "", expected_nonce):
+        response = RedirectResponse("/login?error=google", status.HTTP_303_SEE_OTHER)
+    else:
+        user = upsert_user(db, identity)
+        response = RedirectResponse("/", status.HTTP_303_SEE_OTHER)
+        set_session_cookie(response, user.id, settings)
+    _clear_nonce(response)
+    return response
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

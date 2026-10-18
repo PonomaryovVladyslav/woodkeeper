@@ -5,6 +5,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from google.oauth2 import id_token
+from httpx2 import Response
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
@@ -13,11 +14,13 @@ from app.auth import SESSION_COOKIE, SESSION_MAX_AGE, read_session, sign_session
 from app.config import Settings, get_settings
 from app.main import create_app
 from app.models import User
+from app.routers.auth import NONCE_COOKIE
 
 PUBLIC_ROUTES = {
     ("GET", "/api/health"),
     ("GET", "/api/config"),
-    ("POST", "/api/auth/google"),
+    ("GET", "/api/auth/google/nonce"),
+    ("POST", "/api/auth/google/redirect"),
     ("POST", "/api/auth/logout"),
     ("POST", "/api/auth/test-login"),
 }
@@ -57,34 +60,72 @@ def test_session_expiry() -> None:
     assert read_session(token, "s", now=now + SESSION_MAX_AGE) is None
 
 
-# --- POST /api/auth/google ---
+# --- Google redirect login: GET /google/nonce, then Google POSTs to /google/redirect ---
+
+
+def google_login(client: TestClient, sub: str = "alice", nonce: str | None = None) -> Response:
+    """Fetches a nonce like the login page, then posts the form Google would send.
+
+    The nonce cookie is Secure and the test client talks plain http, so it is passed by hand.
+    """
+    issued = client.get("/api/auth/google/nonce").json()["nonce"]
+    client.cookies.set(NONCE_COOKIE, issued)
+    token_nonce = issued if nonce is None else nonce
+    return client.post(
+        "/api/auth/google/redirect",
+        data={"credential": f"valid:{sub}:{token_nonce}", "g_csrf_token": "x"},
+        follow_redirects=False,
+    )
+
+
+def assert_login_failed(response: Response) -> None:
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login?error=google"
+    assert f"{SESSION_COOKIE}=" not in response.headers.get("set-cookie", "")
+
+
+def test_google_nonce_cookie(client: TestClient) -> None:
+    response = client.get("/api/auth/google/nonce")
+
+    assert response.status_code == 200
+    nonce = response.json()["nonce"]
+    assert len(nonce) >= 32
+    set_cookie = response.headers["set-cookie"]
+    assert set_cookie.startswith(f"{NONCE_COOKIE}={nonce};")
+    for flag in ("HttpOnly", "Secure", "Path=/api/auth/google", "Max-Age=3600"):
+        assert flag in set_cookie
+    assert re.search(r"SameSite=none", set_cookie, re.IGNORECASE)
+    assert response.headers["cache-control"] == "no-store"
+    assert client.get("/api/auth/google/nonce").json()["nonce"] != nonce
 
 
 def test_google_login_creates_user_and_sets_cookie(client: TestClient, db_session: Session) -> None:
-    response = client.post("/api/auth/google", json={"credential": "valid:alice"})
+    response = google_login(client)
 
-    assert response.status_code == 200
-    assert response.json()["email"] == "alice@example.com"
-    set_cookie = response.headers["set-cookie"]
-    assert set_cookie.startswith(f"{SESSION_COOKIE}=")
-    assert "HttpOnly" in set_cookie
-    assert re.search(r"SameSite=lax", set_cookie, re.IGNORECASE)
-    assert f"Max-Age={SESSION_MAX_AGE}" in set_cookie
-    assert "Secure" not in set_cookie
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+    cookies = response.headers.get_list("set-cookie")
+    session = next(c for c in cookies if c.startswith(f"{SESSION_COOKIE}="))
+    assert "HttpOnly" in session
+    assert re.search(r"SameSite=lax", session, re.IGNORECASE)
+    assert f"Max-Age={SESSION_MAX_AGE}" in session
+    assert "Secure" not in session
+    assert any(c.startswith(f'{NONCE_COOKIE}=""') for c in cookies)  # the nonce is single-use
     assert users_count(db_session) == 1
+    assert client.get("/api/auth/me").json()["email"] == "alice@example.com"
 
 
-def test_google_login_again_updates_same_user(
-    client: TestClient, app: FastAPI, db_session: Session
-) -> None:
-    first = client.post("/api/auth/google", json={"credential": "valid:alice"}).json()
+def test_google_login_again_updates_same_user(client: TestClient, db_session: Session) -> None:
+    google_login(client)
+    first = client.get("/api/auth/me").json()
 
     user = db_session.scalar(select(User))
     assert user is not None
     user.email, user.name = "old@example.com", "Old"
     db_session.commit()
 
-    second = client.post("/api/auth/google", json={"credential": "valid:alice"}).json()
+    google_login(client)
+    second = client.get("/api/auth/me").json()
 
     assert second["id"] == first["id"]
     assert second["email"] == "alice@example.com"
@@ -93,21 +134,44 @@ def test_google_login_again_updates_same_user(
 
 
 def test_google_login_invalid_token(client: TestClient, db_session: Session) -> None:
-    response = client.post("/api/auth/google", json={"credential": "forged"})
-
-    assert response.status_code == 401
-    assert "set-cookie" not in response.headers
+    client.cookies.set(NONCE_COOKIE, "n")
+    response = client.post(
+        "/api/auth/google/redirect", data={"credential": "forged"}, follow_redirects=False
+    )
+    assert_login_failed(response)
     assert users_count(db_session) == 0
 
 
-def test_google_login_empty_credential(client: TestClient) -> None:
-    assert client.post("/api/auth/google", json={"credential": ""}).status_code == 422
+def test_google_login_nonce_mismatch(client: TestClient, db_session: Session) -> None:
+    """A token issued for another browser's nonce (login CSRF) is rejected."""
+    assert_login_failed(google_login(client, nonce="attacker-nonce"))
+    assert users_count(db_session) == 0
+
+
+def test_google_login_token_without_nonce(client: TestClient) -> None:
+    client.cookies.set(NONCE_COOKIE, "n")
+    response = client.post(
+        "/api/auth/google/redirect", data={"credential": "valid:alice"}, follow_redirects=False
+    )
+    assert_login_failed(response)
+
+
+def test_google_login_without_nonce_cookie(client: TestClient) -> None:
+    response = client.post(
+        "/api/auth/google/redirect", data={"credential": "valid:alice:n"}, follow_redirects=False
+    )
+    assert_login_failed(response)
+
+
+def test_google_login_empty_form(client: TestClient) -> None:
+    client.cookies.set(NONCE_COOKIE, "n")
+    assert_login_failed(client.post("/api/auth/google/redirect", follow_redirects=False))
 
 
 def test_google_login_not_configured(settings: Settings) -> None:
     app = create_app(settings.model_copy(update={"google_client_id": ""}))
     with TestClient(app) as client:
-        response = client.post("/api/auth/google", json={"credential": "valid:alice"})
+        response = client.post("/api/auth/google/redirect", data={"credential": "valid:alice:n"})
     assert response.status_code == 503
 
 
@@ -116,8 +180,11 @@ def test_secure_cookie_in_production(app: FastAPI, settings: Settings) -> None:
         update={"app_env": "production"}
     )
     with TestClient(app) as client:
-        response = client.post("/api/auth/google", json={"credential": "valid:alice"})
-    assert "Secure" in response.headers["set-cookie"]
+        response = google_login(client)
+    session = next(
+        c for c in response.headers.get_list("set-cookie") if c.startswith(f"{SESSION_COOKIE}=")
+    )
+    assert "Secure" in session
 
 
 # --- /me, logout ---
@@ -128,7 +195,7 @@ def test_me_without_cookie(client: TestClient) -> None:
 
 
 def test_me_after_login(client: TestClient) -> None:
-    client.post("/api/auth/google", json={"credential": "valid:alice"})
+    google_login(client)
     response = client.get("/api/auth/me")
     assert response.status_code == 200
     assert response.json()["email"] == "alice@example.com"

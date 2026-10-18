@@ -123,7 +123,7 @@ BoardUpdate      все поля опциональны + project_id? (пере�
                  faces передаётся целиком
 BoardRead        id, project_id, все поля + faces, created_at, updated_at
 
-GoogleLoginIn    credential: str                           (ID-токен от Google)
+GoogleNonce      nonce: str                                (для кнопки Google, см. API)
 ```
 
 Преобразование 6 колонок ↔ `faces` — функции `faces_from_board()` / `faces_to_columns()`, `BoardRead.from_model()`.
@@ -138,8 +138,9 @@ GoogleLoginIn    credential: str                           (ID-токен от G
 
 | Метод | Путь | Описание |
 |---|---|---|
-| POST | `/api/auth/google` | `{credential}` → проверка токена, upsert пользователя, cookie → `UserRead`. Невалидный токен → 401; `GOOGLE_CLIENT_ID` не задан → 503 |
-| POST | `/api/auth/test-login` | Только при `APP_ENV=test`: `{sub, email, name?}` → как `/google`, но без Google |
+| GET | `/api/auth/google/nonce` | `{nonce}` + cookie `google_nonce` (одноразовый, 1 час); фронтенд передаёт nonce кнопке Google |
+| POST | `/api/auth/google/redirect` | Форма от Google (`credential`, …): проверка токена и nonce, upsert пользователя, cookie сессии → 303 на `/`. Невалидный токен, чужой nonce или нет cookie → 303 на `/login?error=google`; `GOOGLE_CLIENT_ID` не задан → 503 |
+| POST | `/api/auth/test-login` | Только при `APP_ENV=test`: `{sub, email, name?}` → вход без Google, cookie → `UserRead` |
 | POST | `/api/auth/logout` | Удаление cookie |
 | GET | `/api/auth/me` | Текущий пользователь или 401 |
 | GET | `/api/config` | Публичная конфигурация фронтенда: `{google_client_id}` (без авторизации) |
@@ -193,7 +194,7 @@ frontend/src/
     schema.d.ts         генерируется: npm run gen:api (python -m app.openapi → openapi-typescript)
     keys.ts             ключи запросов TanStack Query
     queryClient.ts      любой 401 → me = null → RequireAuth уводит на /login; 4xx не повторяются
-    queries.ts          хуки: useConfig, useMe, useGoogleLogin, useLogout, ...
+    queries.ts          хуки: useConfig, useMe, useLogout, ...
     google.ts           однократная загрузка Google Identity Services
   pages/
     LoginPage.tsx       кнопка Google
@@ -211,7 +212,7 @@ frontend/src/
     FaceSwatches.tsx    облицованные стороны цветными кружками в карточке (до 3D-превью)
     BoardPreview3D.tsx  Canvas + OrbitControls, клик по грани переключает облицовку (lazy-чанк)
     BoardPreviewStatic.tsx  изометрическое SVG-превью для карточек, без WebGL
-    GoogleSignInButton.tsx  кнопка Google Identity Services → credential
+    GoogleSignInButton.tsx  кнопка Google Identity Services (redirect-режим, nonce)
     RequireAuth.tsx     защищённые маршруты: загрузка / ошибка сервера / редирект на /login
   lib/
     types.ts            типы Board / Faces / BoardDraft (до генерации из OpenAPI в этапе 7)
